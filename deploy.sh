@@ -12,17 +12,19 @@ fi
 
 cd lunchboxai
 
-# Create .env if missing (edit with OPENAI_API_KEY, JWT_SECRET, APP_BASE_URL)
+# Create .env if missing (edit with OPENAI_API_KEY, JWT_SECRET)
 if [ ! -f .env ]; then
   cp .env.example .env
-  sed -i 's/PORT=3000/PORT=3001/' .env
-  sed -i 's|APP_BASE_URL=.*|APP_BASE_URL=http://72.60.223.25:3001|' .env
-  echo "WARN: Edit .env with OPENAI_API_KEY and JWT_SECRET before first use"
 fi
+sed -i 's/PORT=3000/PORT=3001/' .env
+sed -i 's|APP_BASE_URL=.*|APP_BASE_URL=http://72.60.223.25:3001|' .env
+sed -i 's/^DB_USER=.*/DB_USER=clearearth/' .env
+sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=Clearearth2026/' .env
 
 # Deploy database
-mysql -u root -e "CREATE DATABASE IF NOT EXISTS lunchboxai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root lunchboxai < schema.sql
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS lunchboxai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
+mysql -u root lunchboxai < schema.sql 2>/dev/null || mysql -u clearearth -pClearearth2026 lunchboxai < schema.sql
+mysql -u root < grant-lunchboxai.sql 2>/dev/null || echo "Run manually: mysql -u root -p < grant-lunchboxai.sql"
 
 # Install deps
 npm ci --omit=dev
