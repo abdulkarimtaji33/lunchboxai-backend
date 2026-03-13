@@ -1,0 +1,444 @@
+{
+  "info": {
+    "name": "LunchBox AI",
+    "_postman_id": "lunchboxai-collection-v1",
+    "description": "Complete API collection for LunchBox AI backend. Set the `token` variable after login/register — it is applied automatically to all authenticated requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
+    { "key": "token",    "value": "",                      "type": "string" },
+    { "key": "child_id", "value": "1",                     "type": "string" },
+    { "key": "session_id","value": "1",                    "type": "string" },
+    { "key": "food_item_id","value": "1",                  "type": "string" },
+    { "key": "nutrition_goal_id","value": "1",             "type": "string" },
+    { "key": "allergen_id","value": "1",                   "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health",
+            "description": "Verify the server is running and connected to MySQL."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.token) pm.collectionVariables.set('token', json.data.token);"
+          ], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"parent@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"Jane Smith\"\n}"
+            },
+            "description": "Register a new parent account. Token is auto-saved to the `token` variable."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.token) pm.collectionVariables.set('token', json.data.token);"
+          ], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"parent@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "description": "Login and receive JWT. Token is auto-saved to the `token` variable."
+          }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/auth/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/auth/me",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Jane Updated Smith\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Google OAuth (browser)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/auth/google",
+            "description": "Open this URL in a browser to start Google OAuth flow. Not testable directly in Postman."
+          }
+        },
+        {
+          "name": "Facebook OAuth (browser)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/auth/facebook",
+            "description": "Open this URL in a browser to start Facebook OAuth flow. Not testable directly in Postman."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Allergens",
+      "item": [
+        {
+          "name": "List All Allergens",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/allergens",
+            "description": "Returns the master list of 15 seeded allergens (Big-9 + others). Public endpoint."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Food Items",
+      "item": [
+        {
+          "name": "List Food Items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/food-items",
+              "query": [
+                { "key": "include_inactive", "value": "false", "disabled": true,
+                  "description": "Set true to include inactive items" }
+              ]
+            },
+            "description": "Public endpoint. Returns all active food items grouped by category."
+          }
+        },
+        {
+          "name": "List Food Items (including inactive)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/food-items?include_inactive=true",
+              "query": [{ "key": "include_inactive", "value": "true" }]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Create Food Item",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.food_item) pm.collectionVariables.set('food_item_id', json.data.food_item.id);"
+          ], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/food-items",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"hummus and pita\",\n  \"category\": \"Snack\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Food Item",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/food-items/{{food_item_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"hummus with pita strips\",\n  \"category\": \"Snack\",\n  \"is_active\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Deactivate Food Item",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/food-items/{{food_item_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Food Item",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/food-items/{{food_item_id}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Nutrition Goals",
+      "item": [
+        {
+          "name": "List Nutrition Goals",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/nutrition-goals",
+            "description": "Public endpoint. Returns all active nutrition goals."
+          }
+        },
+        {
+          "name": "List Nutrition Goals (including inactive)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/nutrition-goals?include_inactive=true",
+              "query": [{ "key": "include_inactive", "value": "true" }]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Create Nutrition Goal",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.nutrition_goal) pm.collectionVariables.set('nutrition_goal_id', json.data.nutrition_goal.id);"
+          ], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/nutrition-goals",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"goal_key\": \"dairy_free\",\n  \"label\": \"Dairy Free\",\n  \"description\": \"dairy free — avoid all milk, cheese, yogurt and dairy-derived ingredients\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Nutrition Goal",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/nutrition-goals/{{nutrition_goal_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Dairy Free Diet\",\n  \"description\": \"dairy free — exclude all dairy products including hidden dairy in processed foods\",\n  \"is_active\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Nutrition Goal",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/nutrition-goals/{{nutrition_goal_id}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Children",
+      "item": [
+        {
+          "name": "Add Child",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.child) pm.collectionVariables.set('child_id', json.data.child.id);"
+          ], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/children",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lily\",\n  \"age\": 7,\n  \"dislikes\": \"mushrooms, onions\",\n  \"school_rules\": \"no nuts, no reheating\",\n  \"nutrition_goal\": \"balanced\",\n  \"calorie_target\": 450,\n  \"protein_target\": 20\n}"
+            }
+          }
+        },
+        {
+          "name": "List Children",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/children",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Update Child",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/children/{{child_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lily\",\n  \"age\": 8,\n  \"nutrition_goal\": \"high_protein\",\n  \"protein_target\": 25\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Child",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/children/{{child_id}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Add Allergen to Child",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/children/{{child_id}}/allergens",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"allergen_id\": 1,\n  \"severity\": \"severe\",\n  \"notes\": \"EpiPen required. Avoid all peanut traces.\"\n}"
+            },
+            "description": "allergen_id 1 = Peanuts. Get IDs from GET /api/allergens."
+          }
+        },
+        {
+          "name": "Remove Allergen from Child",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/children/{{child_id}}/allergens/{{allergen_id}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Lunchbox",
+      "item": [
+        {
+          "name": "Create Session (generate lunchbox)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.session) pm.collectionVariables.set('session_id', json.data.session.id);"
+          ], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/lunchbox/sessions",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "lunchbox",              "type": "file",  "src": "",        "description": "Required: photo of the empty lunchbox" },
+                { "key": "ingredients",           "type": "file",  "src": "",        "description": "Optional: up to 5 ingredient images" },
+                { "key": "child_id",              "type": "text",  "value": "{{child_id}}", "description": "Optional: child profile ID" },
+                { "key": "notes",                 "type": "text",  "value": "Please make it colourful and fun!", "description": "Optional: parent notes" },
+                { "key": "prep_time_minutes",     "type": "text",  "value": "10",    "description": "Optional: max prep time" },
+                { "key": "nutrition_goal_override","type": "text", "value": "",      "description": "Optional: override child's nutrition goal for this session" },
+                { "key": "dislikes_override",     "type": "text",  "value": "",      "description": "Optional: override child's dislikes for this session" },
+                { "key": "school_rules_override", "type": "text",  "value": "",      "description": "Optional: override school rules for this session" },
+                { "key": "allergen_override_ids", "type": "text",  "value": "",      "description": "Optional: JSON array of extra allergen IDs e.g. [1,3]" }
+              ]
+            },
+            "description": "Upload lunchbox image + optional ingredient images. The AI pipeline runs synchronously and returns the filled lunchbox image as base64 in `filledLunchboxUrl`."
+          }
+        },
+        {
+          "name": "Get Session History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/lunchbox/sessions?page=1&limit=10",
+              "query": [
+                { "key": "page",     "value": "1" },
+                { "key": "limit",    "value": "10" },
+                { "key": "child_id", "value": "{{child_id}}", "disabled": true,
+                  "description": "Filter sessions by child" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Get Single Session",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/lunchbox/sessions/{{session_id}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Returns session + ingredient images + AI result (includes generated image base64)."
+          }
+        },
+        {
+          "name": "Delete Session",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/lunchbox/sessions/{{session_id}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Deletes the session record from DB and removes all associated image files from disk."
+          }
+        },
+        {
+          "name": "Get Session History (filtered by child)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/lunchbox/sessions?child_id={{child_id}}&page=1&limit=10",
+              "query": [
+                { "key": "child_id", "value": "{{child_id}}" },
+                { "key": "page",     "value": "1" },
+                { "key": "limit",    "value": "10" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    }
+
+  ]
+}
