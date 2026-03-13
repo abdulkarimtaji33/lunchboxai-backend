@@ -103,6 +103,25 @@ CREATE TABLE IF NOT EXISTS lunchbox_results (
   CONSTRAINT fk_results_session FOREIGN KEY (session_id) REFERENCES lunchbox_sessions(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS food_items (
+  id         INT UNSIGNED  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name       VARCHAR(200)  NOT NULL UNIQUE,
+  category   VARCHAR(100)  NULL,
+  is_active  TINYINT(1)    NOT NULL DEFAULT 1,
+  created_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS nutrition_goals (
+  id          INT UNSIGNED  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  goal_key    VARCHAR(50)   NOT NULL UNIQUE,
+  label       VARCHAR(100)  NOT NULL,
+  description TEXT          NOT NULL,
+  is_active   TINYINT(1)    NOT NULL DEFAULT 1,
+  created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 INSERT IGNORE INTO allergens (name, category, description, is_common) VALUES
   ('Peanuts',      'Nuts',        'Groundnuts and peanut-derived products',         1),
   ('Tree Nuts',    'Nuts',        'Almonds, cashews, walnuts, pistachios, etc.',    1),
@@ -119,3 +138,36 @@ INSERT IGNORE INTO allergens (name, category, description, is_common) VALUES
   ('Sulphites',    'Additives',   'Sulphur dioxide used as a preservative',         0),
   ('Corn',         'Grains',      'Corn and corn-derived ingredients',              0),
   ('Latex-Fruit',  'Other',       'Cross-reactive fruits: banana, avocado, kiwi',  0);
+
+INSERT IGNORE INTO food_items (name, category) VALUES
+  ('peanut butter and jelly sandwich', 'Sandwich'),
+  ('turkey and cheese sandwich',       'Sandwich'),
+  ('ham sandwich',                     'Sandwich'),
+  ('chicken sandwich',                 'Sandwich'),
+  ('tuna sandwich',                    'Sandwich'),
+  ('grilled cheese sandwich',          'Sandwich'),
+  ('mini burgers/sliders',             'Sandwich'),
+  ('chicken nuggets',                  'Main'),
+  ('hot dog',                          'Main'),
+  ('pasta with tomato or cheese sauce','Main'),
+  ('mac and cheese',                   'Main'),
+  ('wrap with turkey/cheese',          'Sandwich'),
+  ('cheese quesadilla',                'Main'),
+  ('boiled eggs',                      'Protein'),
+  ('yogurt cups',                      'Dairy'),
+  ('apple slices',                     'Fruit'),
+  ('banana',                           'Fruit'),
+  ('grapes',                           'Fruit'),
+  ('carrot sticks',                    'Vegetable'),
+  ('cucumber slices',                  'Vegetable'),
+  ('string cheese',                    'Dairy'),
+  ('crackers',                         'Snack'),
+  ('mini muffins',                     'Snack');
+
+INSERT IGNORE INTO nutrition_goals (goal_key, label, description) VALUES
+  ('balanced',      'Balanced',      'balanced nutrition — aim for variety across all food groups'),
+  ('high_protein',  'High Protein',  'high protein — prioritize protein-rich foods like eggs, chicken, cheese, beans'),
+  ('high_calories', 'High Calories', 'high calories — include calorie-dense foods like nut butters, cheese, avocado'),
+  ('low_sugar',     'Low Sugar',     'low sugar — avoid sugary items, use natural fruit only'),
+  ('low_carb',      'Low Carb',      'low carb — minimize bread and starchy foods, favour protein and vegetables'),
+  ('high_fiber',    'High Fiber',    'high fiber — include whole grains, legumes, fruits, and vegetables');
