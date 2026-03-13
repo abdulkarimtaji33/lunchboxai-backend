@@ -16,8 +16,8 @@ cd lunchboxai
 if [ ! -f .env ]; then
   cp .env.example .env
 fi
-sed -i 's/PORT=3000/PORT=3001/' .env
-sed -i 's|APP_BASE_URL=.*|APP_BASE_URL=http://72.60.223.25:3001|' .env
+sed -i 's/PORT=3000/PORT=5100/' .env
+sed -i 's|APP_BASE_URL=.*|APP_BASE_URL=http://72.60.223.25:5100|' .env
 sed -i 's/^DB_USER=.*/DB_USER=clearearth/' .env
 sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=Clearearth2026/' .env
 
@@ -37,4 +37,4 @@ pm2 delete lunchboxai-api 2>/dev/null || true
 pm2 start ecosystem.config.js
 pm2 save
 
-echo "LunchBox AI deployed on port 3001. Health: http://72.60.223.25:3001/health"
+echo "LunchBox AI deployed on port 5100. Health: http://72.60.223.25:5100/health"
