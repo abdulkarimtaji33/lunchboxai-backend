@@ -27,7 +27,7 @@ SET time_zone = "+00:00";
 -- Table structure for table `allergens`
 --
 
-CREATE TABLE `allergens` (
+CREATE TABLE IF NOT EXISTS `allergens` (
   `id` smallint(5) UNSIGNED NOT NULL,
   `name` varchar(100) NOT NULL,
   `icon` varchar(100) DEFAULT NULL,
@@ -63,7 +63,7 @@ INSERT INTO `allergens` (`id`, `name`, `icon`, `category`, `description`, `is_co
 -- Table structure for table `avatars`
 --
 
-CREATE TABLE `avatars` (
+CREATE TABLE IF NOT EXISTS `avatars` (
   `id` int(11) NOT NULL,
   `name` varchar(50) NOT NULL,
   `filename` varchar(100) NOT NULL,
@@ -91,7 +91,7 @@ INSERT INTO `avatars` (`id`, `name`, `filename`, `is_active`, `created_at`) VALU
 -- Table structure for table `children`
 --
 
-CREATE TABLE `children` (
+CREATE TABLE IF NOT EXISTS `children` (
   `id` int(10) UNSIGNED NOT NULL,
   `user_id` int(10) UNSIGNED NOT NULL,
   `name` varchar(100) NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE `children` (
 -- Table structure for table `child_allergens`
 --
 
-CREATE TABLE `child_allergens` (
+CREATE TABLE IF NOT EXISTS `child_allergens` (
   `child_id` int(10) UNSIGNED NOT NULL,
   `allergen_id` smallint(5) UNSIGNED NOT NULL,
   `severity` enum('intolerance','allergy','severe') NOT NULL DEFAULT 'allergy',
@@ -120,7 +120,7 @@ CREATE TABLE `child_allergens` (
 -- Table structure for table `child_nutrition_goals`
 --
 
-CREATE TABLE `child_nutrition_goals` (
+CREATE TABLE IF NOT EXISTS `child_nutrition_goals` (
   `child_id` int(10) UNSIGNED NOT NULL,
   `nutrition_goal_id` int(10) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -131,7 +131,7 @@ CREATE TABLE `child_nutrition_goals` (
 -- Table structure for table `child_school_rules`
 --
 
-CREATE TABLE `child_school_rules` (
+CREATE TABLE IF NOT EXISTS `child_school_rules` (
   `child_id` int(10) UNSIGNED NOT NULL,
   `school_rule_id` smallint(5) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -142,7 +142,7 @@ CREATE TABLE `child_school_rules` (
 -- Table structure for table `food_items`
 --
 
-CREATE TABLE `food_items` (
+CREATE TABLE IF NOT EXISTS `food_items` (
   `id` int(10) UNSIGNED NOT NULL,
   `name` varchar(200) NOT NULL,
   `category` varchar(100) DEFAULT NULL,
@@ -186,7 +186,7 @@ INSERT INTO `food_items` (`id`, `name`, `category`, `is_active`, `created_at`, `
 -- Table structure for table `ingredient_images`
 --
 
-CREATE TABLE `ingredient_images` (
+CREATE TABLE IF NOT EXISTS `ingredient_images` (
   `id` int(10) UNSIGNED NOT NULL,
   `session_id` int(10) UNSIGNED NOT NULL,
   `image_path` varchar(500) NOT NULL,
@@ -200,7 +200,7 @@ CREATE TABLE `ingredient_images` (
 -- Table structure for table `lunchbox_results`
 --
 
-CREATE TABLE `lunchbox_results` (
+CREATE TABLE IF NOT EXISTS `lunchbox_results` (
   `id` int(10) UNSIGNED NOT NULL,
   `session_id` int(10) UNSIGNED NOT NULL,
   `ai_text_response` longtext DEFAULT NULL,
@@ -222,7 +222,7 @@ CREATE TABLE `lunchbox_results` (
 -- Table structure for table `lunchbox_sessions`
 --
 
-CREATE TABLE `lunchbox_sessions` (
+CREATE TABLE IF NOT EXISTS `lunchbox_sessions` (
   `id` int(10) UNSIGNED NOT NULL,
   `user_id` int(10) UNSIGNED NOT NULL,
   `child_id` int(10) UNSIGNED DEFAULT NULL,
@@ -244,7 +244,7 @@ CREATE TABLE `lunchbox_sessions` (
 -- Table structure for table `nutrition_goals`
 --
 
-CREATE TABLE `nutrition_goals` (
+CREATE TABLE IF NOT EXISTS `nutrition_goals` (
   `id` int(10) UNSIGNED NOT NULL,
   `goal_key` varchar(50) NOT NULL,
   `label` varchar(100) NOT NULL,
@@ -272,7 +272,7 @@ INSERT INTO `nutrition_goals` (`id`, `goal_key`, `label`, `description`, `is_act
 -- Table structure for table `school_rules`
 --
 
-CREATE TABLE `school_rules` (
+CREATE TABLE IF NOT EXISTS `school_rules` (
   `id` smallint(5) UNSIGNED NOT NULL,
   `name` varchar(100) NOT NULL,
   `description` varchar(255) DEFAULT NULL,
@@ -299,7 +299,7 @@ INSERT INTO `school_rules` (`id`, `name`, `description`, `is_active`) VALUES
 -- Table structure for table `session_allergen_overrides`
 --
 
-CREATE TABLE `session_allergen_overrides` (
+CREATE TABLE IF NOT EXISTS `session_allergen_overrides` (
   `session_id` int(10) UNSIGNED NOT NULL,
   `allergen_id` smallint(5) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -310,7 +310,7 @@ CREATE TABLE `session_allergen_overrides` (
 -- Table structure for table `users`
 --
 
-CREATE TABLE `users` (
+CREATE TABLE IF NOT EXISTS `users` (
   `id` int(10) UNSIGNED NOT NULL,
   `email` varchar(255) NOT NULL,
   `password_hash` varchar(255) DEFAULT NULL,
