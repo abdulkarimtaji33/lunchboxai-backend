@@ -12,60 +12,67 @@ async function create({ userId, name, dateOfBirth, avatarId }) {
 }
 
 async function findByUser(userId) {
-  const [rows] = await pool.execute(
-    `SELECT c.*,
-       av.name AS avatar_name, av.filename AS avatar_filename,
-       JSON_ARRAYAGG(
-         IF(ca.allergen_id IS NULL, NULL,
-           JSON_OBJECT('id', a.id, 'name', a.name, 'category', a.category,
-                       'severity', ca.severity, 'notes', ca.notes)
-         )
-       ) AS allergens,
-       JSON_ARRAYAGG(
-         IF(csr.school_rule_id IS NULL, NULL,
-           JSON_OBJECT('id', sr.id, 'name', sr.name, 'description', sr.description)
-         )
-       ) AS school_rules
+  const [children] = await pool.execute(
+    `SELECT c.*, av.name AS avatar_name, av.filename AS avatar_filename
      FROM children c
-     LEFT JOIN avatars av          ON av.id = c.avatar_id
-     LEFT JOIN child_allergens ca  ON ca.child_id = c.id
-     LEFT JOIN allergens a         ON a.id = ca.allergen_id
-     LEFT JOIN child_school_rules csr ON csr.child_id = c.id
-     LEFT JOIN school_rules sr     ON sr.id = csr.school_rule_id
+     LEFT JOIN avatars av ON av.id = c.avatar_id
      WHERE c.user_id = ?
-     GROUP BY c.id
      ORDER BY c.created_at ASC`,
     [userId]
   );
-  return rows.map(normalizeChild);
+  if (!children.length) return [];
+  return attachRelations(children);
 }
 
 async function findByIdAndUser(id, userId) {
   const [rows] = await pool.execute(
-    `SELECT c.*,
-       av.name AS avatar_name, av.filename AS avatar_filename,
-       JSON_ARRAYAGG(
-         IF(ca.allergen_id IS NULL, NULL,
-           JSON_OBJECT('id', a.id, 'name', a.name, 'category', a.category,
-                       'severity', ca.severity, 'notes', ca.notes)
-         )
-       ) AS allergens,
-       JSON_ARRAYAGG(
-         IF(csr.school_rule_id IS NULL, NULL,
-           JSON_OBJECT('id', sr.id, 'name', sr.name, 'description', sr.description)
-         )
-       ) AS school_rules
+    `SELECT c.*, av.name AS avatar_name, av.filename AS avatar_filename
      FROM children c
-     LEFT JOIN avatars av          ON av.id = c.avatar_id
-     LEFT JOIN child_allergens ca  ON ca.child_id = c.id
-     LEFT JOIN allergens a         ON a.id = ca.allergen_id
-     LEFT JOIN child_school_rules csr ON csr.child_id = c.id
-     LEFT JOIN school_rules sr     ON sr.id = csr.school_rule_id
-     WHERE c.id = ? AND c.user_id = ?
-     GROUP BY c.id`,
+     LEFT JOIN avatars av ON av.id = c.avatar_id
+     WHERE c.id = ? AND c.user_id = ?`,
     [id, userId]
   );
-  return rows[0] ? normalizeChild(rows[0]) : null;
+  if (!rows[0]) return null;
+  const [child] = await attachRelations(rows);
+  return child;
+}
+
+// Attach allergens + school_rules to a list of children via separate queries
+async function attachRelations(children) {
+  const ids = children.map(c => c.id);
+  const placeholders = ids.map(() => '?').join(',');
+
+  const [allergenRows] = await pool.execute(
+    `SELECT ca.child_id, a.id, a.name, a.category, ca.severity, ca.notes
+     FROM child_allergens ca
+     JOIN allergens a ON a.id = ca.allergen_id
+     WHERE ca.child_id IN (${placeholders})
+     ORDER BY a.name ASC`,
+    ids
+  );
+
+  const [ruleRows] = await pool.execute(
+    `SELECT csr.child_id, sr.id, sr.name, sr.description
+     FROM child_school_rules csr
+     JOIN school_rules sr ON sr.id = csr.school_rule_id
+     WHERE csr.child_id IN (${placeholders})
+     ORDER BY sr.name ASC`,
+    ids
+  );
+
+  // Index by child_id
+  const allergenMap = {};
+  for (const r of allergenRows) {
+    if (!allergenMap[r.child_id]) allergenMap[r.child_id] = [];
+    allergenMap[r.child_id].push({ id: r.id, name: r.name, category: r.category, severity: r.severity, notes: r.notes });
+  }
+  const ruleMap = {};
+  for (const r of ruleRows) {
+    if (!ruleMap[r.child_id]) ruleMap[r.child_id] = [];
+    ruleMap[r.child_id].push({ id: r.id, name: r.name, description: r.description });
+  }
+
+  return children.map(row => normalizeChild(row, allergenMap[row.id] || [], ruleMap[row.id] || []));
 }
 
 async function update(id, fields) {
@@ -126,29 +133,12 @@ async function setSchoolRules(childId, schoolRuleIds) {
   }
 }
 
-function normalizeChild(row) {
-  let allergens = [];
-  try {
-    const parsed = typeof row.allergens === 'string' ? JSON.parse(row.allergens) : row.allergens;
-    allergens = (parsed || []).filter(Boolean);
-  } catch {
-    allergens = [];
-  }
-
-  let school_rules = [];
-  try {
-    const parsed = typeof row.school_rules === 'string' ? JSON.parse(row.school_rules) : row.school_rules;
-    school_rules = (parsed || []).filter(Boolean);
-  } catch {
-    school_rules = [];
-  }
-
+function normalizeChild(row, allergens, school_rules) {
   const { avatar_name, avatar_filename, ...rest } = row;
   const avatar = row.avatar_id
     ? { id: row.avatar_id, name: avatar_name, filename: avatar_filename }
     : null;
-
-  return { ...rest, school_rules, allergens, avatar };
+  return { ...rest, allergens, school_rules, avatar };
 }
 
 module.exports = { create, findByUser, findByIdAndUser, update, deleteById, addAllergen, removeAllergen, getAllergens, setSchoolRules };
