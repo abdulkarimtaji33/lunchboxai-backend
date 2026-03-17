@@ -36,11 +36,17 @@ CREATE TABLE IF NOT EXISTS `allergens` (
   `is_common` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Add columns that may be missing from older deployments
+ALTER TABLE `allergens` ADD COLUMN IF NOT EXISTS `icon` varchar(100) DEFAULT NULL AFTER `name`;
+ALTER TABLE `allergens` ADD COLUMN IF NOT EXISTS `category` varchar(100) DEFAULT NULL AFTER `icon`;
+ALTER TABLE `allergens` ADD COLUMN IF NOT EXISTS `description` varchar(255) DEFAULT NULL AFTER `category`;
+ALTER TABLE `allergens` ADD COLUMN IF NOT EXISTS `is_common` tinyint(1) NOT NULL DEFAULT 0 AFTER `description`;
+
 --
 -- Dumping data for table `allergens`
 --
 
-INSERT INTO `allergens` (`id`, `name`, `icon`, `category`, `description`, `is_common`) VALUES
+INSERT IGNORE INTO `allergens` (`id`, `name`, `icon`, `category`, `description`, `is_common`) VALUES
 (1, 'Peanuts', NULL, 'Nuts', 'Groundnuts and peanut-derived products', 1),
 (2, 'Tree Nuts', NULL, 'Nuts', 'Almonds, cashews, walnuts, pistachios, etc.', 1),
 (3, 'Milk/Dairy', NULL, 'Dairy', 'Cow milk and dairy products', 1),
@@ -75,7 +81,7 @@ CREATE TABLE IF NOT EXISTS `avatars` (
 -- Dumping data for table `avatars`
 --
 
-INSERT INTO `avatars` (`id`, `name`, `filename`, `is_active`, `created_at`) VALUES
+INSERT IGNORE INTO `avatars` (`id`, `name`, `filename`, `is_active`, `created_at`) VALUES
 (1, 'Lion', 'lion.png', 1, '2026-03-16 10:22:52'),
 (2, 'Panda', 'panda.png', 1, '2026-03-16 10:22:52'),
 (3, 'Fox', 'fox.png', 1, '2026-03-16 10:22:52'),
@@ -155,7 +161,7 @@ CREATE TABLE IF NOT EXISTS `food_items` (
 -- Dumping data for table `food_items`
 --
 
-INSERT INTO `food_items` (`id`, `name`, `category`, `is_active`, `created_at`, `updated_at`) VALUES
+INSERT IGNORE INTO `food_items` (`id`, `name`, `category`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, 'peanut butter and jelly sandwich', 'Sandwich', 1, '2026-03-16 10:22:52', '2026-03-16 10:22:52'),
 (2, 'turkey and cheese sandwich', 'Sandwich', 1, '2026-03-16 10:22:52', '2026-03-16 10:22:52'),
 (3, 'ham sandwich', 'Sandwich', 1, '2026-03-16 10:22:52', '2026-03-16 10:22:52'),
@@ -258,7 +264,7 @@ CREATE TABLE IF NOT EXISTS `nutrition_goals` (
 -- Dumping data for table `nutrition_goals`
 --
 
-INSERT INTO `nutrition_goals` (`id`, `goal_key`, `label`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
+INSERT IGNORE INTO `nutrition_goals` (`id`, `goal_key`, `label`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, 'balanced', 'Balanced', 'balanced nutrition — aim for variety across all food groups', 1, '2026-03-16 10:22:52', '2026-03-16 10:22:52'),
 (2, 'high_protein', 'High Protein', 'high protein — prioritize protein-rich foods like eggs, chicken, cheese, beans', 1, '2026-03-16 10:22:52', '2026-03-16 10:22:52'),
 (3, 'high_calories', 'High Calories', 'high calories — include calorie-dense foods like nut butters, cheese, avocado', 1, '2026-03-16 10:22:52', '2026-03-16 10:22:52'),
@@ -283,7 +289,7 @@ CREATE TABLE IF NOT EXISTS `school_rules` (
 -- Dumping data for table `school_rules`
 --
 
-INSERT INTO `school_rules` (`id`, `name`, `description`, `is_active`) VALUES
+INSERT IGNORE INTO `school_rules` (`id`, `name`, `description`, `is_active`) VALUES
 (1, 'No Nuts', 'No peanuts or tree nuts allowed', 1),
 (2, 'No Meat', 'No meat products allowed', 1),
 (3, 'No Reheating', 'No microwave or reheating facilities', 1),
