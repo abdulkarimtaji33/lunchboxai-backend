@@ -102,7 +102,7 @@ async function createSession(req, res, next) {
     await conn.beginTransaction();
     await LunchBox.attachResult(conn, sessionId, {
       aiTextResponse:    lunchboxDescription,
-      suggestedItems:    foodItems.map(name => ({ name })),
+      suggestedItems:    foodItems,
       nutritionNotes:    null,
       arrangementDesc:   lunchboxDescription,
       funNote:           null,

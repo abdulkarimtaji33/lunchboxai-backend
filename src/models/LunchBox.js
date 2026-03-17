@@ -84,7 +84,7 @@ async function findByUser(userId, { page, limit, offset, childId }) {
 
   const [rows] = await pool.execute(
     `SELECT s.*, c.name AS child_name,
-       r.suggested_items, r.nutrition_notes, r.fun_note, r.generated_image_path
+       r.suggested_items, r.nutrition_notes, r.fun_note, r.generated_image_path, r.generated_image_b64
      FROM lunchbox_sessions s
      LEFT JOIN children c        ON c.id = s.child_id
      LEFT JOIN lunchbox_results r ON r.session_id = s.id

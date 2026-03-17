@@ -1,7 +1,7 @@
 const Joi = require('joi');
 
 const registerSchema = Joi.object({
-  name: Joi.string().min(2).max(100).required(),
+  full_name: Joi.string().min(2).max(100).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
 });
@@ -13,7 +13,7 @@ const loginSchema = Joi.object({
 
 const childSchema = Joi.object({
   name:            Joi.string().min(1).max(100).required(),
-  date_of_birth:   Joi.date().iso().max('now').required(),
+  date_of_birth:   Joi.date().iso().max('now').optional(),
   avatar_id:       Joi.number().integer().positive().optional(),
   allergen_ids:    Joi.array().items(Joi.number().integer().positive()).optional(),
   school_rule_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
