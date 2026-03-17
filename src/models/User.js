@@ -1,67 +1,54 @@
-'use strict';
+const pool = require('../config/database');
+const bcrypt = require('bcryptjs');
 
-const { pool } = require('../config/database');
+const User = {
+  async findById(id) {
+    const [rows] = await pool.query('SELECT id, name, email, provider, avatar_url, created_at FROM users WHERE id = ?', [id]);
+    return rows[0] || null;
+  },
 
-const PUBLIC_FIELDS = 'id, email, full_name, avatar_url, auth_provider, created_at, updated_at';
+  async findByEmail(email) {
+    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    return rows[0] || null;
+  },
 
-async function findByEmail(email) {
-  const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
-  return rows[0] || null;
-}
+  async findByProvider(provider, providerId) {
+    const [rows] = await pool.query('SELECT * FROM users WHERE provider = ? AND provider_id = ?', [provider, providerId]);
+    return rows[0] || null;
+  },
 
-async function findById(id) {
-  const [rows] = await pool.execute(
-    `SELECT ${PUBLIC_FIELDS} FROM users WHERE id = ?`,
-    [id]
-  );
-  return rows[0] || null;
-}
+  async create({ name, email, password }) {
+    const hashed = await bcrypt.hash(password, 10);
+    const [result] = await pool.query(
+      'INSERT INTO users (name, email, password_hash, provider) VALUES (?, ?, ?, ?)',
+      [name, email, hashed, 'local']
+    );
+    return this.findById(result.insertId);
+  },
 
-async function findBySocialId(provider, providerId) {
-  const column = provider === 'google' ? 'google_id' : 'facebook_id';
-  const [rows] = await pool.execute(
-    `SELECT ${PUBLIC_FIELDS} FROM users WHERE ${column} = ?`,
-    [providerId]
-  );
-  return rows[0] || null;
-}
+  async createSocial({ provider, provider_id, name, email, avatar_url }) {
+    const [result] = await pool.query(
+      'INSERT INTO users (name, email, provider, provider_id, avatar_url) VALUES (?, ?, ?, ?, ?)',
+      [name, email || null, provider, provider_id, avatar_url || null]
+    );
+    return this.findById(result.insertId);
+  },
 
-async function create({ email, passwordHash, fullName, providerId, idField, avatarUrl, authProvider }) {
-  const [result] = await pool.execute(
-    `INSERT INTO users (email, password_hash, full_name, ${idField || 'google_id'}, avatar_url, auth_provider)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [
-      email,
-      passwordHash || null,
-      fullName,
-      providerId   || null,
-      avatarUrl    || null,
-      authProvider || 'local',
-    ]
-  );
-  return result.insertId;
-}
+  async createLocal({ email, passwordHash, name }) {
+    const [result] = await pool.query(
+      'INSERT INTO users (name, email, password_hash, provider) VALUES (?, ?, ?, ?)',
+      [name, email, passwordHash, 'local']
+    );
+    return result.insertId;
+  },
 
-async function createLocal({ email, passwordHash, fullName }) {
-  const [result] = await pool.execute(
-    'INSERT INTO users (email, password_hash, full_name, auth_provider) VALUES (?, ?, ?, ?)',
-    [email, passwordHash, fullName, 'local']
-  );
-  return result.insertId;
-}
+  async updateProfile(id, { name }) {
+    await pool.query('UPDATE users SET name = ? WHERE id = ?', [name, id]);
+  },
 
-async function linkSocialAccount(id, idField, providerId, avatarUrl) {
-  await pool.execute(
-    `UPDATE users SET ${idField} = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?`,
-    [providerId, avatarUrl, id]
-  );
-}
+  async comparePassword(plainPassword, hash) {
+    return bcrypt.compare(plainPassword, hash);
+  },
+};
 
-async function updateProfile(id, { fullName }) {
-  await pool.execute(
-    'UPDATE users SET full_name = ? WHERE id = ?',
-    [fullName, id]
-  );
-}
-
-module.exports = { findByEmail, findById, findBySocialId, create, createLocal, linkSocialAccount, updateProfile };
+module.exports = User;

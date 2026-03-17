@@ -6,7 +6,7 @@ const express  = require('express');
 const cors     = require('cors');
 const path     = require('path');
 
-const { PORT }           = require('./src/config/env');
+const env                = require('./src/config/env');
 const { testConnection } = require('./src/config/database');
 const passport           = require('./src/config/passport');
 
@@ -15,6 +15,8 @@ const allergenRoutes     = require('./src/routes/allergenRoutes');
 const foodItemRoutes     = require('./src/routes/foodItemRoutes');
 const nutritionGoalRoutes= require('./src/routes/nutritionGoalRoutes');
 const childRoutes        = require('./src/routes/childRoutes');
+const avatarRoutes       = require('./src/routes/avatarRoutes');
+const schoolRuleRoutes   = require('./src/routes/schoolRuleRoutes');
 const lunchboxRoutes     = require('./src/routes/lunchboxRoutes');
 const errorHandler       = require('./src/middleware/errorHandler');
 
@@ -40,6 +42,8 @@ app.use('/api/allergens',        allergenRoutes);
 app.use('/api/food-items',       foodItemRoutes);
 app.use('/api/nutrition-goals',  nutritionGoalRoutes);
 app.use('/api/children',         childRoutes);
+app.use('/api/avatars',          avatarRoutes);
+app.use('/api/school-rules',     schoolRuleRoutes);
 app.use('/api/lunchbox',         lunchboxRoutes);
 
 // --- 404 for unknown routes ---
@@ -53,8 +57,8 @@ app.use(errorHandler);
 // --- Start ---
 async function start() {
   await testConnection();
-  app.listen(PORT, () => {
-    console.log(`LunchBox AI server running on http://localhost:${PORT}`);
+  app.listen(env.port, () => {
+    console.log(`LunchBox AI server running on http://localhost:${env.port}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }

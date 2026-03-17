@@ -6,7 +6,7 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
+    { "key": "base_url", "value": "http://localhost:5100", "type": "string" },
     { "key": "token",    "value": "",                      "type": "string" },
     { "key": "child_id", "value": "1",                     "type": "string" },
     { "key": "session_id","value": "1",                    "type": "string" },
@@ -118,6 +118,20 @@
             "method": "GET",
             "url": "{{base_url}}/api/allergens",
             "description": "Returns the master list of 15 seeded allergens (Big-9 + others). Public endpoint."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "School Rules",
+      "item": [
+        {
+          "name": "List All School Rules",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/school-rules",
+            "description": "Returns the master list of school rules. Use IDs in school_rule_ids when creating/updating a child profile."
           }
         }
       ]
@@ -279,6 +293,21 @@
     },
 
     {
+      "name": "Avatars",
+      "item": [
+        {
+          "name": "List Avatars",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/avatars",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Returns all active avatars from the DB. Each avatar includes id, name, filename, and image_data (base64 string e.g. data:image/png;base64,...). Use image_data directly in <Image source={{ uri: item.image_data }} /> on mobile."
+          }
+        }
+      ]
+    },
+
+    {
       "name": "Children",
       "item": [
         {
@@ -296,8 +325,9 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Lily\",\n  \"age\": 7,\n  \"dislikes\": \"mushrooms, onions\",\n  \"school_rules\": \"no nuts, no reheating\",\n  \"nutrition_goal\": \"balanced\",\n  \"calorie_target\": 450,\n  \"protein_target\": 20\n}"
-            }
+              "raw": "{\n  \"name\": \"Lily\",\n  \"date_of_birth\": \"2018-06-15\",\n  \"avatar_id\": 1,\n  \"allergen_ids\": [1, 3],\n  \"school_rule_ids\": [1, 3]\n}"
+            },
+            "description": "Create a child profile. avatar_id comes from GET /api/avatars. allergen_ids comes from GET /api/allergens. school_rule_ids comes from GET /api/school-rules. date_of_birth must be ISO date (YYYY-MM-DD) in the past."
           }
         },
         {
@@ -319,8 +349,9 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Lily\",\n  \"age\": 8,\n  \"nutrition_goal\": \"high_protein\",\n  \"protein_target\": 25\n}"
-            }
+              "raw": "{\n  \"name\": \"Lily\",\n  \"date_of_birth\": \"2017-03-20\",\n  \"avatar_id\": 2,\n  \"school_rule_ids\": [1, 3]\n}"
+            },
+            "description": "All fields optional. To clear avatar, send avatar_id: null. school_rule_ids replaces the child's current school rules entirely."
           }
         },
         {

@@ -1,6 +1,6 @@
 'use strict';
 
-const { pool } = require('../config/database');
+const pool = require('../config/database');
 
 async function findAll({ includeInactive = false } = {}) {
   const where = includeInactive ? '' : 'WHERE is_active = 1';

@@ -3,11 +3,11 @@
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const User   = require('../models/User');
-const { JWT_SECRET, JWT_EXPIRES_IN, FRONTEND_URL } = require('../config/env');
+const env    = require('../config/env');
 const { formatResponse, formatError } = require('../utils/helpers');
 
 function signToken(userId) {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign({ id: userId }, env.jwt.secret, { expiresIn: env.jwt.expiresIn });
 }
 
 async function register(req, res, next) {
@@ -20,7 +20,7 @@ async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const userId       = await User.createLocal({ email, passwordHash, fullName: full_name });
+    const userId       = await User.createLocal({ email, passwordHash, name: full_name });
     const user         = await User.findById(userId);
     const token        = signToken(userId);
 
@@ -52,8 +52,14 @@ async function login(req, res, next) {
   }
 }
 
-async function getProfile(req, res) {
-  res.json(formatResponse({ user: req.user }));
+async function getProfile(req, res, next) {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json(formatError('User not found', 'NOT_FOUND'));
+    res.json(formatResponse({ user }));
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function updateProfile(req, res, next) {
@@ -62,7 +68,7 @@ async function updateProfile(req, res, next) {
     if (!full_name) {
       return res.status(400).json(formatError('full_name is required', 'VALIDATION_ERROR'));
     }
-    await User.updateProfile(req.user.id, { fullName: full_name });
+    await User.updateProfile(req.user.id, { name: full_name });
     const updated = await User.findById(req.user.id);
     res.json(formatResponse({ user: updated }));
   } catch (err) {
@@ -73,7 +79,7 @@ async function updateProfile(req, res, next) {
 // Called after passport authenticates via Google or Facebook
 function handleOAuthCallback(req, res) {
   const token = signToken(req.user.id);
-  res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
+  res.redirect(`${env.frontendUrl}/auth/callback?token=${token}`);
 }
 
 module.exports = { register, login, getProfile, updateProfile, handleOAuthCallback };

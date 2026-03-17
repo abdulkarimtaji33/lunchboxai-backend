@@ -1,6 +1,6 @@
 'use strict';
 
-const { pool } = require('../config/database');
+const pool = require('../config/database');
 
 async function createSession(conn, { userId, childId, lunchboxImagePath, notes, dislikesOverride,
   schoolRulesOverride, prepTimeMinutes, nutritionGoalOverride }) {

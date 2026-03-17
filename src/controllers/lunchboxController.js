@@ -1,6 +1,6 @@
 'use strict';
 
-const { pool }     = require('../config/database');
+const pool         = require('../config/database');
 const LunchBox     = require('../models/LunchBox');
 const Child        = require('../models/Child');
 const { analyzeLunchbox }       = require('../services/aiService');

@@ -1,41 +1,28 @@
-'use strict';
-
 const multer = require('multer');
-const path   = require('path');
-const fs     = require('fs');
+const path = require('path');
+const fs = require('fs');
+const { UPLOAD_DIR, MAX_FILE_SIZE, ALLOWED_IMAGE_TYPES } = require('../config/constants');
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    const dir = file.fieldname === 'lunchbox'
-      ? 'uploads/lunchboxes'
-      : 'uploads/ingredients';
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename(req, file, cb) {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-    cb(null, `${Date.now()}-${safe}`);
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename: (req, file, cb) => {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${unique}${path.extname(file.originalname)}`);
   },
 });
 
-function fileFilter(req, file, cb) {
-  if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type'), false);
-  }
-}
+const fileFilter = (req, file, cb) => {
+  if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) cb(null, true);
+  else cb(new Error('Only JPEG, PNG, and WebP images are allowed'), false);
+};
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: MAX_FILE_SIZE },
-}).fields([
-  { name: 'lunchbox',     maxCount: 1 },
-  { name: 'ingredients',  maxCount: 5 },
+const multerInstance = multer({ storage, fileFilter, limits: { fileSize: MAX_FILE_SIZE } });
+
+const upload = multerInstance.fields([
+  { name: 'lunchbox',    maxCount: 1 },
+  { name: 'ingredients', maxCount: 5 },
 ]);
 
 module.exports = { upload };

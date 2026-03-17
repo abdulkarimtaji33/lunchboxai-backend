@@ -2,7 +2,7 @@
 
 const router = require('express').Router();
 const { authenticate } = require('../middleware/authMiddleware');
-const { validate, childSchema, childAllergenSchema } = require('../utils/validators');
+const { validate, childSchema, childUpdateSchema, childAllergenSchema } = require('../utils/validators');
 const {
   addChild, listChildren, updateChild, deleteChild,
   addAllergen, removeAllergen,
@@ -12,7 +12,7 @@ router.use(authenticate);
 
 router.post('/',    validate(childSchema), addChild);
 router.get('/',     listChildren);
-router.patch('/:id',  updateChild);
+router.patch('/:id',  validate(childUpdateSchema), updateChild);
 router.delete('/:id', deleteChild);
 
 // Child allergens

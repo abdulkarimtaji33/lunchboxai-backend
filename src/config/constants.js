@@ -1,7 +1,8 @@
-'use strict';
+// Non-DB constants only. KIDS_FOODS and NUTRITION_GOAL_LABELS moved to DB tables.
 
-// Food items and nutrition goals are now stored in the database.
-// See models/FoodItem.js and models/NutritionGoal.js.
-// This file is kept as a reference for the initial seed data only.
-
-module.exports = {};
+module.exports = {
+  UPLOAD_DIR: 'uploads',
+  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+  DEFAULT_FOOD_COUNT: 10,
+};

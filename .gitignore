@@ -1,8 +1,4 @@
 node_modules/
 .env
-uploads/lunchboxes/*
-uploads/ingredients/*
-uploads/results/*
-!uploads/lunchboxes/.gitkeep
-!uploads/ingredients/.gitkeep
-!uploads/results/.gitkeep
+uploads/
+*.log

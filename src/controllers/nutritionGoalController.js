@@ -16,8 +16,7 @@ async function listNutritionGoals(req, res, next) {
 async function createNutritionGoal(req, res, next) {
   try {
     const { goal_key, label, description } = req.body;
-    const id   = await NutritionGoal.create({ goalKey: goal_key, label, description });
-    const goal = await NutritionGoal.findById(id);
+    const goal = await NutritionGoal.create({ goal_key, label, description });
     res.status(201).json(formatResponse({ nutrition_goal: goal }));
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {

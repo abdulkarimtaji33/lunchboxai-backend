@@ -1,25 +1,22 @@
-'use strict';
-
 const mysql = require('mysql2/promise');
-const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME } = require('./env');
+const env = require('./env');
 
 const pool = mysql.createPool({
-  host:             DB_HOST,
-  port:             DB_PORT,
-  user:             DB_USER,
-  password:         DB_PASSWORD,
-  database:         DB_NAME,
+  host: env.db.host,
+  port: env.db.port,
+  user: env.db.user,
+  password: env.db.password,
+  database: env.db.database,
   waitForConnections: true,
-  connectionLimit:  10,
-  queueLimit:       0,
-  timezone:         '+00:00',
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
 async function testConnection() {
-  const connection = await pool.getConnection();
-  await connection.query('SELECT 1');
-  connection.release();
-  console.log('MySQL connection pool established.');
+  const conn = await pool.getConnection();
+  console.log('Database connected successfully');
+  conn.release();
 }
 
-module.exports = { pool, testConnection };
+module.exports = pool;
+module.exports.testConnection = testConnection;

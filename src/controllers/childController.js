@@ -6,17 +6,25 @@ const { formatResponse, formatError } = require('../utils/helpers');
 
 async function addChild(req, res, next) {
   try {
-    const { name, age, dislikes, school_rules, nutrition_goal, calorie_target, protein_target } = req.body;
+    const { name, date_of_birth, avatar_id, allergen_ids, school_rule_ids } = req.body;
+
     const childId = await Child.create({
-      userId:        req.user.id,
+      userId:      req.user.id,
       name,
-      age:           age           || null,
-      dislikes:      dislikes      || null,
-      schoolRules:   school_rules  || null,
-      nutritionGoal: nutrition_goal || 'balanced',
-      calorieTarget: calorie_target || null,
-      proteinTarget: protein_target || null,
+      dateOfBirth: date_of_birth || null,
+      avatarId:    avatar_id    || null,
     });
+
+    if (Array.isArray(allergen_ids) && allergen_ids.length) {
+      for (const allergenId of allergen_ids) {
+        await Child.addAllergen(childId, allergenId, 'allergy', null);
+      }
+    }
+
+    if (Array.isArray(school_rule_ids) && school_rule_ids.length) {
+      await Child.setSchoolRules(childId, school_rule_ids);
+    }
+
     const child = await Child.findByIdAndUser(childId, req.user.id);
     res.status(201).json(formatResponse({ child }));
   } catch (err) {
@@ -38,14 +46,12 @@ async function updateChild(req, res, next) {
     const child = await Child.findByIdAndUser(req.params.id, req.user.id);
     if (!child) return res.status(404).json(formatError('Child not found', 'NOT_FOUND'));
 
-    const { name, age, dislikes, school_rules, nutrition_goal, calorie_target, protein_target } = req.body;
-    await Child.update(child.id, {
-      name, age, dislikes,
-      school_rules,
-      nutrition_goal,
-      calorie_target,
-      protein_target,
-    });
+    const { name, date_of_birth, avatar_id, school_rule_ids } = req.body;
+    await Child.update(child.id, { name, date_of_birth, avatar_id });
+
+    if (Array.isArray(school_rule_ids)) {
+      await Child.setSchoolRules(child.id, school_rule_ids);
+    }
 
     const updated = await Child.findByIdAndUser(child.id, req.user.id);
     res.json(formatResponse({ child: updated }));
