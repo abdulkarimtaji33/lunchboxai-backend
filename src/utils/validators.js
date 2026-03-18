@@ -16,6 +16,11 @@ const childSchema = Joi.object({
   date_of_birth:   Joi.date().iso().max('now').optional(),
   avatar_id:       Joi.number().integer().positive().optional(),
   allergen_ids:    Joi.array().items(Joi.number().integer().positive()).optional(),
+  allergens:       Joi.array().items(Joi.object({
+    allergen_id: Joi.number().integer().positive().required(),
+    severity:    Joi.string().valid('intolerance', 'allergy', 'severe').optional(),
+    notes:       Joi.string().max(255).allow('', null).optional(),
+  })).optional(),
   school_rule_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
 });
 

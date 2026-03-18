@@ -6,7 +6,7 @@ const { formatResponse, formatError } = require('../utils/helpers');
 
 async function addChild(req, res, next) {
   try {
-    const { name, date_of_birth, avatar_id, allergen_ids, school_rule_ids } = req.body;
+    const { name, date_of_birth, avatar_id, allergen_ids, allergens: allergenList, school_rule_ids } = req.body;
 
     const childId = await Child.create({
       userId:      req.user.id,
@@ -15,7 +15,11 @@ async function addChild(req, res, next) {
       avatarId:    avatar_id    || null,
     });
 
-    if (Array.isArray(allergen_ids) && allergen_ids.length) {
+    if (Array.isArray(allergenList) && allergenList.length) {
+      for (const item of allergenList) {
+        await Child.addAllergen(childId, item.allergen_id, item.severity || 'allergy', item.notes || null);
+      }
+    } else if (Array.isArray(allergen_ids) && allergen_ids.length) {
       for (const allergenId of allergen_ids) {
         await Child.addAllergen(childId, allergenId, 'allergy', null);
       }

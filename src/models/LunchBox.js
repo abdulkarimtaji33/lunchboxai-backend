@@ -77,8 +77,8 @@ async function findByUser(userId, { page, limit, offset, childId }) {
 
   const where = conditions.join(' AND ');
 
-  const [[{ total }]] = await pool.execute(
-    `SELECT COUNT(*) AS total FROM lunchbox_sessions s WHERE ${where}`,
+  const [[{ total, completed_count }]] = await pool.execute(
+    `SELECT COUNT(*) AS total, SUM(s.status = 'completed') AS completed_count FROM lunchbox_sessions s WHERE ${where}`,
     params
   );
 
@@ -94,7 +94,7 @@ async function findByUser(userId, { page, limit, offset, childId }) {
     [...params, limit, offset]
   );
 
-  return { rows: rows.map(normalizeSession), total, page, limit };
+  return { rows: rows.map(normalizeSession), total, completed_count: Number(completed_count) || 0, page, limit };
 }
 
 async function findByIdAndUser(sessionId, userId) {
