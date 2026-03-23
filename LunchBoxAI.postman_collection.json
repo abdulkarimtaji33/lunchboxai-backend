@@ -615,6 +615,12 @@
                   "type": "text",
                   "value": "",
                   "description": "Optional — JSON array of extra allergen IDs to add for this session only. Example: [1,3,5]. These are stored in session_allergen_overrides and merged with child allergens during AI analysis."
+                },
+                {
+                  "key": "use_image_edit",
+                  "type": "text",
+                  "value": "false",
+                  "description": "Optional — set to true to use the image edit API (gpt-image-1 edit), which fills the actual lunchbox photo instead of generating a new image from scratch. Default: false (uses image generate)."
                 }
               ]
             },

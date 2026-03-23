@@ -3,7 +3,6 @@
 const OpenAI        = require('openai');
 const { OPENAI_API_KEY }          = require('../config/env');
 const { resizeForApi, getMimeTypeFromPath } = require('./imageService');
-const FoodItem      = require('../models/FoodItem');
 const NutritionGoal = require('../models/NutritionGoal');
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
@@ -13,10 +12,14 @@ const VISION_PROMPT = `Analyze this lunchbox image carefully and describe it. I 
 
 // --- Exact same compartment/shape/orientation parsing as working server.js ---
 function parseLunchboxDescription(description) {
-  const countMatch = description.match(/(\d+)\s+(?:compartments?|sections?|parts?)/i);
-  const compartmentCount = countMatch
-    ? Math.max(1, Math.min(8, parseInt(countMatch[1], 10)))
-    : 3;
+  const WORD_TO_NUM = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8 };
+  const countMatch = description.match(/(\d+|one|two|three|four|five|six|seven|eight)\s+(?:compartments?|sections?|parts?)/i);
+  let compartmentCount = 3;
+  if (countMatch) {
+    const raw = countMatch[1].toLowerCase();
+    const n = WORD_TO_NUM[raw] ?? parseInt(raw, 10);
+    compartmentCount = Math.max(1, Math.min(8, n));
+  }
 
   const descLower = description.toLowerCase();
   let shape       = 'rectangular';
@@ -121,10 +124,7 @@ async function analyzeLunchbox({ lunchboxImagePath, ingredientImagePaths = [], c
 
   const { compartmentCount, shape, orientation } = parseLunchboxDescription(lunchboxDescription);
 
-  // Fetch random food items from DB instead of hardcoded array
-  const randomFoods = await FoodItem.getRandomActive(compartmentCount);
-
-  return { lunchboxDescription, compartmentCount, shape, orientation, randomFoods };
+  return { lunchboxDescription, compartmentCount, shape, orientation };
 }
 
 module.exports = { analyzeLunchbox };

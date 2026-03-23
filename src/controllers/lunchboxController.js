@@ -4,7 +4,7 @@ const pool         = require('../config/database');
 const LunchBox     = require('../models/LunchBox');
 const Child        = require('../models/Child');
 const { analyzeLunchbox }       = require('../services/aiService');
-const { generateFilledLunchbox } = require('../services/imageGenService');
+const { generateFilledLunchbox, generateFilledLunchboxEdit } = require('../services/imageGenService');
 const { deleteFiles }           = require('../services/imageService');
 const { formatResponse, formatError, paginate } = require('../utils/helpers');
 
@@ -32,6 +32,7 @@ async function createSession(req, res, next) {
       dislikes_override, school_rules_override,
       prep_time_minutes, nutrition_goal_override,
       allergen_override_ids,
+      use_image_edit,
     } = req.body;
 
     // Parse allergen_override_ids (can arrive as JSON string from multipart)
@@ -83,7 +84,7 @@ async function createSession(req, res, next) {
     };
 
     // Step 1: Vision analysis
-    const { lunchboxDescription, compartmentCount, shape, orientation, randomFoods } =
+    const { lunchboxDescription, compartmentCount, shape, orientation } =
       await analyzeLunchbox({
         lunchboxImagePath:    lunchboxFile.path,
         ingredientImagePaths: ingredientFiles.map(f => f.path),
@@ -92,9 +93,12 @@ async function createSession(req, res, next) {
         sessionOverrides,
       });
 
-    // Step 2: Image generation
+    // Step 2: Image generation (use_image_edit=true uses the actual lunchbox photo as base)
+    const useEdit = use_image_edit === 'true' || use_image_edit === true;
     const { filledImageDataUrl, filledImageB64, foodItems, attemptSummaries, generatedAnalysis } =
-      await generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation, randomFoods });
+      useEdit
+        ? await generateFilledLunchboxEdit({ lunchboxImagePath: lunchboxFile.path, lunchboxDescription, compartmentCount, shape, orientation })
+        : await generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation });
 
     const processingMs = Date.now() - startTime;
 
