@@ -488,14 +488,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Lily Rose\",\n  \"date_of_birth\": \"2017-03-20\",\n  \"avatar_id\": 2,\n  \"school_rule_ids\": [1, 3, 6]\n}"
+              "raw": "{\n  \"name\": \"Lily Rose\",\n  \"date_of_birth\": \"2017-03-20\",\n  \"avatar_id\": 2,\n  \"allergen_ids\": [1, 3],\n  \"school_rule_ids\": [1, 3, 6]\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/children/{{child_id}}",
               "host": ["{{base_url}}"],
               "path": ["api", "children", "{{child_id}}"]
             },
-            "description": "Update a child profile. Requires auth. Must own the child.\n\nAll fields optional: `name`, `date_of_birth`, `avatar_id` (pass null to clear), `school_rule_ids`.\n\nNote: `school_rule_ids` fully replaces the child's current rules (pass empty array `[]` to clear all rules).\n\nTo update allergens use the POST/DELETE child allergen endpoints instead.\n\nHTTP 404 if child not found or not owned by caller."
+            "description": "Update a child profile. Requires auth. Must own the child.\n\nAll fields optional: `name`, `date_of_birth`, `avatar_id` (pass null to clear), `allergen_ids`, `allergens`, `school_rule_ids`.\n\nNote: `allergen_ids` / `allergens` fully replaces the child's current allergens (pass empty array `[]` to clear all). Use `allergens` for the richer format with severity + notes.\n\nNote: `school_rule_ids` fully replaces the child's current rules (pass empty array `[]` to clear all rules).\n\nHTTP 404 if child not found or not owned by caller."
           }
         },
         {

@@ -121,6 +121,18 @@ async function getAllergens(childId) {
   return rows;
 }
 
+async function setAllergens(childId, allergenList) {
+  await pool.execute('DELETE FROM child_allergens WHERE child_id = ?', [childId]);
+  if (allergenList && allergenList.length) {
+    const placeholders = allergenList.map(() => '(?, ?, ?, ?)').join(', ');
+    const values = allergenList.flatMap(item => [childId, item.allergen_id, item.severity || 'allergy', item.notes || null]);
+    await pool.execute(
+      `INSERT INTO child_allergens (child_id, allergen_id, severity, notes) VALUES ${placeholders}`,
+      values
+    );
+  }
+}
+
 async function setSchoolRules(childId, schoolRuleIds) {
   await pool.execute('DELETE FROM child_school_rules WHERE child_id = ?', [childId]);
   if (schoolRuleIds && schoolRuleIds.length) {
@@ -141,4 +153,4 @@ function normalizeChild(row, allergens, school_rules) {
   return { ...rest, allergens, school_rules, avatar };
 }
 
-module.exports = { create, findByUser, findByIdAndUser, update, deleteById, addAllergen, removeAllergen, getAllergens, setSchoolRules };
+module.exports = { create, findByUser, findByIdAndUser, update, deleteById, addAllergen, removeAllergen, getAllergens, setAllergens, setSchoolRules };

@@ -50,11 +50,17 @@ async function updateChild(req, res, next) {
     const child = await Child.findByIdAndUser(req.params.id, req.user.id);
     if (!child) return res.status(404).json(formatError('Child not found', 'NOT_FOUND'));
 
-    const { name, date_of_birth, avatar_id, school_rule_ids } = req.body;
+    const { name, date_of_birth, avatar_id, school_rule_ids, allergen_ids, allergens: allergenList } = req.body;
     await Child.update(child.id, { name, date_of_birth, avatar_id });
 
     if (Array.isArray(school_rule_ids)) {
       await Child.setSchoolRules(child.id, school_rule_ids);
+    }
+
+    if (Array.isArray(allergenList)) {
+      await Child.setAllergens(child.id, allergenList);
+    } else if (Array.isArray(allergen_ids)) {
+      await Child.setAllergens(child.id, allergen_ids.map(id => ({ allergen_id: id })));
     }
 
     const updated = await Child.findByIdAndUser(child.id, req.user.id);
