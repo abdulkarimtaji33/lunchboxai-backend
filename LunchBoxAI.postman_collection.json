@@ -2,17 +2,18 @@
   "info": {
     "name": "LunchBox AI",
     "_postman_id": "lunchboxai-collection-v1",
-    "description": "Complete API collection for LunchBox AI backend. Set the `token` variable after login/register — it is applied automatically to all authenticated requests.",
+    "description": "Complete API collection for LunchBox AI backend.\n\nBase URL: http://localhost:5100\n\nCollection variables:\n- `base_url` — server origin (default: http://localhost:5100)\n- `token`    — JWT; auto-populated by Register / Login test scripts\n- `child_id` — auto-populated by Add Child test script\n- `session_id` — auto-populated by Create Session test script\n- `food_item_id` — auto-populated by Create Food Item test script\n- `nutrition_goal_id` — auto-populated by Create Nutrition Goal test script\n- `allergen_id` — master-data allergen ID (1=Peanuts, 2=Tree Nuts, 3=Milk/Dairy, 4=Eggs, 5=Wheat/Gluten, 6=Soy, 7=Fish, 8=Shellfish, 9=Sesame, 10=Mustard, …15); set manually before using child-allergen endpoints\n\nRun order for a full E2E flow:\n1. Register (or Login)\n2. List Allergens → pick allergen IDs\n3. List School Rules → pick rule IDs\n4. List Avatars → pick avatar ID\n5. Add Child\n6. Create Session (generate lunchbox)\n7. Get Session History",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:5100", "type": "string" },
-    { "key": "token",    "value": "",                      "type": "string" },
-    { "key": "child_id", "value": "1",                     "type": "string" },
-    { "key": "session_id","value": "1",                    "type": "string" },
-    { "key": "food_item_id","value": "1",                  "type": "string" },
-    { "key": "nutrition_goal_id","value": "1",             "type": "string" },
-    { "key": "allergen_id","value": "1",                   "type": "string" }
+    { "key": "base_url",           "value": "http://localhost:5100", "type": "string" },
+    { "key": "token",              "value": "",                      "type": "string" },
+    { "key": "child_id",           "value": "1",                     "type": "string" },
+    { "key": "session_id",         "value": "1",                     "type": "string" },
+    { "key": "food_item_id",       "value": "1",                     "type": "string" },
+    { "key": "nutrition_goal_id",  "value": "1",                     "type": "string" },
+    { "key": "allergen_id",        "value": "1",                     "type": "string",
+      "description": "Master-data allergen ID. 1=Peanuts, 2=Tree Nuts, 3=Milk/Dairy, 4=Eggs, 5=Wheat/Gluten, 6=Soy, 7=Fish, 8=Shellfish, 9=Sesame, 10=Mustard, 11=Celery, 12=Lupin, 13=Sulphites, 14=Corn, 15=Latex-Fruit. Set manually before calling child-allergen endpoints." }
   ],
   "item": [
 
@@ -23,8 +24,13 @@
           "name": "Health Check",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/health",
-            "description": "Verify the server is running and connected to MySQL."
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Verify the server is running and connected to MySQL. Returns `{ status: 'ok', timestamp }`. No auth required."
           }
         }
       ]
@@ -37,49 +43,67 @@
           "name": "Register",
           "event": [{ "listen": "test", "script": { "exec": [
             "const json = pm.response.json();",
-            "if (json.data && json.data.token) pm.collectionVariables.set('token', json.data.token);"
+            "if (json.data && json.data.token) {",
+            "  pm.collectionVariables.set('token', json.data.token);",
+            "  console.log('Token saved:', json.data.token.substring(0, 20) + '...');",
+            "}"
           ], "type": "text/javascript" } }],
           "request": {
             "method": "POST",
-            "url": "{{base_url}}/api/auth/register",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"parent@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"Jane Smith\"\n}"
             },
-            "description": "Register a new parent account. Token is auto-saved to the `token` variable."
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Register a new parent account.\n\nRequired fields:\n- `email` — valid email address\n- `password` — min 6 characters\n- `full_name` — 2–100 characters\n\nReturns `{ data: { token, user } }`. Token is auto-saved to the `token` collection variable.\n\nHTTP 409 if email already registered."
           }
         },
         {
           "name": "Login",
           "event": [{ "listen": "test", "script": { "exec": [
             "const json = pm.response.json();",
-            "if (json.data && json.data.token) pm.collectionVariables.set('token', json.data.token);"
+            "if (json.data && json.data.token) {",
+            "  pm.collectionVariables.set('token', json.data.token);",
+            "  console.log('Token saved:', json.data.token.substring(0, 20) + '...');",
+            "}"
           ], "type": "text/javascript" } }],
           "request": {
             "method": "POST",
-            "url": "{{base_url}}/api/auth/login",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"parent@example.com\",\n  \"password\": \"password123\"\n}"
             },
-            "description": "Login and receive JWT. Token is auto-saved to the `token` variable."
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login with email + password.\n\nReturns `{ data: { token, user } }`. Token is auto-saved to the `token` collection variable.\n\nHTTP 401 if credentials are invalid."
           }
         },
         {
           "name": "Get My Profile",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/auth/me",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Returns the authenticated user's profile: `{ data: { user } }`.\n\nRequires Bearer token."
           }
         },
         {
           "name": "Update My Profile",
           "request": {
             "method": "PATCH",
-            "url": "{{base_url}}/api/auth/me",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
@@ -87,23 +111,39 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"full_name\": \"Jane Updated Smith\"\n}"
-            }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Update the authenticated user's display name.\n\nRequired: `full_name` (string).\n\nReturns updated user object."
           }
         },
         {
-          "name": "Google OAuth (browser)",
+          "name": "Google OAuth (browser only)",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/auth/google",
-            "description": "Open this URL in a browser to start Google OAuth flow. Not testable directly in Postman."
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/google",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google"]
+            },
+            "description": "Initiates Google OAuth2 flow. Must be opened in a browser — not testable directly in Postman.\n\nOn success, redirects to `{FRONTEND_URL}/auth/callback?token=<jwt>`."
           }
         },
         {
-          "name": "Facebook OAuth (browser)",
+          "name": "Facebook OAuth (browser only)",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/auth/facebook",
-            "description": "Open this URL in a browser to start Facebook OAuth flow. Not testable directly in Postman."
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/facebook",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "facebook"]
+            },
+            "description": "Initiates Facebook OAuth flow. Must be opened in a browser — not testable directly in Postman.\n\nOn success, redirects to `{FRONTEND_URL}/auth/callback?token=<jwt>`."
           }
         }
       ]
@@ -116,8 +156,13 @@
           "name": "List All Allergens",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/allergens",
-            "description": "Returns the master list of 15 seeded allergens (Big-9 + others). Public endpoint."
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/allergens",
+              "host": ["{{base_url}}"],
+              "path": ["api", "allergens"]
+            },
+            "description": "Returns the master list of 15 seeded allergens (Big-9 + others).\n\nPublic — no auth required.\n\nResponse: `{ data: { allergens: [ { id, name, icon, category, description, is_common } ] } }`\n\nUse `id` values when building a child profile (allergen_ids / allergens[].allergen_id)."
           }
         }
       ]
@@ -130,8 +175,13 @@
           "name": "List All School Rules",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/school-rules",
-            "description": "Returns the master list of school rules. Use IDs in school_rule_ids when creating/updating a child profile."
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/school-rules",
+              "host": ["{{base_url}}"],
+              "path": ["api", "school-rules"]
+            },
+            "description": "Returns the master list of 8 seeded school rules.\n\nPublic — no auth required.\n\nResponse: `{ data: { school_rules: [ { id, name, description, is_active } ] } }`\n\nUse `id` values in `school_rule_ids` when creating or updating a child profile."
           }
         }
       ]
@@ -144,36 +194,41 @@
           "name": "List Food Items",
           "request": {
             "method": "GET",
+            "header": [],
             "url": {
               "raw": "{{base_url}}/api/food-items",
+              "host": ["{{base_url}}"],
+              "path": ["api", "food-items"],
               "query": [
                 { "key": "include_inactive", "value": "false", "disabled": true,
-                  "description": "Set true to include inactive items" }
+                  "description": "Set to true to include inactive food items (admin use)" }
               ]
             },
-            "description": "Public endpoint. Returns all active food items grouped by category."
+            "description": "Returns all active food items.\n\nPublic — no auth required.\n\nResponse: `{ data: { food_items: [ { id, name, category, is_active, created_at, updated_at } ] } }`"
           }
         },
         {
-          "name": "List Food Items (including inactive)",
+          "name": "List Food Items (include inactive)",
           "request": {
             "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{base_url}}/api/food-items?include_inactive=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "food-items"],
               "query": [{ "key": "include_inactive", "value": "true" }]
             },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "description": "Returns all food items including inactive ones. Public endpoint (auth optional)."
           }
         },
         {
           "name": "Create Food Item",
           "event": [{ "listen": "test", "script": { "exec": [
             "const json = pm.response.json();",
-            "if (json.data && json.data.food_item) pm.collectionVariables.set('food_item_id', json.data.food_item.id);"
+            "if (json.data && json.data.food_item) pm.collectionVariables.set('food_item_id', String(json.data.food_item.id));"
           ], "type": "text/javascript" } }],
           "request": {
             "method": "POST",
-            "url": "{{base_url}}/api/food-items",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
@@ -181,14 +236,19 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"hummus and pita\",\n  \"category\": \"Snack\"\n}"
-            }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/food-items",
+              "host": ["{{base_url}}"],
+              "path": ["api", "food-items"]
+            },
+            "description": "Create a new food item. Requires auth.\n\nRequired: `name` (1–100 chars).\nOptional: `category` (max 50 chars), `is_active` (boolean, default true).\n\nHTTP 409 if a food item with that name already exists."
           }
         },
         {
           "name": "Update Food Item",
           "request": {
             "method": "PATCH",
-            "url": "{{base_url}}/api/food-items/{{food_item_id}}",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
@@ -196,14 +256,19 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"hummus with pita strips\",\n  \"category\": \"Snack\",\n  \"is_active\": true\n}"
-            }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/food-items/{{food_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "food-items", "{{food_item_id}}"]
+            },
+            "description": "Update an existing food item by ID. Requires auth.\n\nAll fields optional: `name`, `category`, `is_active`.\n\nHTTP 404 if not found. HTTP 409 on duplicate name."
           }
         },
         {
           "name": "Deactivate Food Item",
           "request": {
             "method": "PATCH",
-            "url": "{{base_url}}/api/food-items/{{food_item_id}}",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
@@ -211,15 +276,26 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"is_active\": false\n}"
-            }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/food-items/{{food_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "food-items", "{{food_item_id}}"]
+            },
+            "description": "Soft-deactivate a food item (sets is_active = false). Requires auth."
           }
         },
         {
           "name": "Delete Food Item",
           "request": {
             "method": "DELETE",
-            "url": "{{base_url}}/api/food-items/{{food_item_id}}",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/food-items/{{food_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "food-items", "{{food_item_id}}"]
+            },
+            "description": "Permanently delete a food item by ID. Requires auth.\n\nHTTP 204 on success. HTTP 404 if not found."
           }
         }
       ]
@@ -232,30 +308,41 @@
           "name": "List Nutrition Goals",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/nutrition-goals",
-            "description": "Public endpoint. Returns all active nutrition goals."
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/nutrition-goals",
+              "host": ["{{base_url}}"],
+              "path": ["api", "nutrition-goals"],
+              "query": [
+                { "key": "include_inactive", "value": "false", "disabled": true,
+                  "description": "Set to true to include inactive goals" }
+              ]
+            },
+            "description": "Returns all active nutrition goals.\n\nPublic — no auth required.\n\nResponse: `{ data: { nutrition_goals: [ { id, goal_key, label, description, is_active } ] } }`\n\nSeeded keys: balanced, high_protein, high_calories, low_sugar, low_carb, high_fiber."
           }
         },
         {
-          "name": "List Nutrition Goals (including inactive)",
+          "name": "List Nutrition Goals (include inactive)",
           "request": {
             "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{base_url}}/api/nutrition-goals?include_inactive=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "nutrition-goals"],
               "query": [{ "key": "include_inactive", "value": "true" }]
             },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "description": "Returns all nutrition goals including inactive. Public endpoint (auth optional)."
           }
         },
         {
           "name": "Create Nutrition Goal",
           "event": [{ "listen": "test", "script": { "exec": [
             "const json = pm.response.json();",
-            "if (json.data && json.data.nutrition_goal) pm.collectionVariables.set('nutrition_goal_id', json.data.nutrition_goal.id);"
+            "if (json.data && json.data.nutrition_goal) pm.collectionVariables.set('nutrition_goal_id', String(json.data.nutrition_goal.id));"
           ], "type": "text/javascript" } }],
           "request": {
             "method": "POST",
-            "url": "{{base_url}}/api/nutrition-goals",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
@@ -263,14 +350,19 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"goal_key\": \"dairy_free\",\n  \"label\": \"Dairy Free\",\n  \"description\": \"dairy free — avoid all milk, cheese, yogurt and dairy-derived ingredients\"\n}"
-            }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/nutrition-goals",
+              "host": ["{{base_url}}"],
+              "path": ["api", "nutrition-goals"]
+            },
+            "description": "Create a new nutrition goal. Requires auth.\n\nRequired: `goal_key` (1–50 chars, unique), `label` (1–100 chars).\nOptional: `description`, `is_active`.\n\nHTTP 409 if goal_key already exists."
           }
         },
         {
           "name": "Update Nutrition Goal",
           "request": {
             "method": "PATCH",
-            "url": "{{base_url}}/api/nutrition-goals/{{nutrition_goal_id}}",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
@@ -278,15 +370,26 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"label\": \"Dairy Free Diet\",\n  \"description\": \"dairy free — exclude all dairy products including hidden dairy in processed foods\",\n  \"is_active\": true\n}"
-            }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/nutrition-goals/{{nutrition_goal_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "nutrition-goals", "{{nutrition_goal_id}}"]
+            },
+            "description": "Update a nutrition goal by ID. Requires auth.\n\nAll fields optional: `goal_key`, `label`, `description`, `is_active`.\n\nHTTP 404 if not found. HTTP 409 on duplicate goal_key."
           }
         },
         {
           "name": "Delete Nutrition Goal",
           "request": {
             "method": "DELETE",
-            "url": "{{base_url}}/api/nutrition-goals/{{nutrition_goal_id}}",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/nutrition-goals/{{nutrition_goal_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "nutrition-goals", "{{nutrition_goal_id}}"]
+            },
+            "description": "Permanently delete a nutrition goal by ID. Requires auth.\n\nHTTP 204 on success. HTTP 404 if not found."
           }
         }
       ]
@@ -299,9 +402,13 @@
           "name": "List Avatars",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/avatars",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "description": "Returns all active avatars from the DB. Each avatar includes id, name, filename, and image_data (base64 string e.g. data:image/png;base64,...). Use image_data directly in <Image source={{ uri: item.image_data }} /> on mobile."
+            "url": {
+              "raw": "{{base_url}}/api/avatars",
+              "host": ["{{base_url}}"],
+              "path": ["api", "avatars"]
+            },
+            "description": "Returns all active avatars. Requires auth.\n\nResponse: `{ data: { avatars: [ { id, name, filename, image_data, is_active, created_at } ] } }`\n\nEach avatar includes `image_data` as a base64 data-URI (e.g. `data:image/png;base64,...`).\nUse directly as `<Image source={{ uri: item.image_data }} />` in React Native.\n\nSeeded: Lion(1), Panda(2), Fox(3), Bunny(4), Bear(5), Cat(6), Dog(7), Penguin(8).\nUse `id` as `avatar_id` when creating or updating a child profile."
           }
         }
       ]
@@ -314,11 +421,10 @@
           "name": "Add Child",
           "event": [{ "listen": "test", "script": { "exec": [
             "const json = pm.response.json();",
-            "if (json.data && json.data.child) pm.collectionVariables.set('child_id', json.data.child.id);"
+            "if (json.data && json.data.child) pm.collectionVariables.set('child_id', String(json.data.child.id));"
           ], "type": "text/javascript" } }],
           "request": {
             "method": "POST",
-            "url": "{{base_url}}/api/children",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
@@ -327,63 +433,115 @@
               "mode": "raw",
               "raw": "{\n  \"name\": \"Lily\",\n  \"date_of_birth\": \"2018-06-15\",\n  \"avatar_id\": 1,\n  \"allergen_ids\": [1, 3],\n  \"school_rule_ids\": [1, 3]\n}"
             },
-            "description": "Create a child profile. avatar_id comes from GET /api/avatars. allergen_ids comes from GET /api/allergens. school_rule_ids comes from GET /api/school-rules. date_of_birth must be ISO date (YYYY-MM-DD) in the past."
+            "url": {
+              "raw": "{{base_url}}/api/children",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children"]
+            },
+            "description": "Create a child profile. Requires auth. Scoped to the authenticated user.\n\nRequired: `name` (1–100 chars).\nOptional:\n- `date_of_birth` — ISO date YYYY-MM-DD, must be in the past\n- `avatar_id` — from GET /api/avatars\n- `allergen_ids` — array of allergen IDs (all assigned with severity=allergy)\n- `allergens` — richer format: `[{ allergen_id, severity, notes }]` (see Add Child (detailed allergens) example)\n- `school_rule_ids` — array of school rule IDs from GET /api/school-rules\n\nChild ID is auto-saved to `child_id` variable.\n\nResponse includes child with nested `allergens`, `school_rules`, and `avatar`."
+          }
+        },
+        {
+          "name": "Add Child (detailed allergens)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.child) pm.collectionVariables.set('child_id', String(json.data.child.id));"
+          ], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Oliver\",\n  \"date_of_birth\": \"2017-09-01\",\n  \"avatar_id\": 5,\n  \"allergens\": [\n    { \"allergen_id\": 1, \"severity\": \"severe\", \"notes\": \"EpiPen required. Zero tolerance.\" },\n    { \"allergen_id\": 3, \"severity\": \"intolerance\", \"notes\": \"Causes stomach upset.\" },\n    { \"allergen_id\": 5, \"severity\": \"allergy\" }\n  ],\n  \"school_rule_ids\": [3, 5, 6]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/children",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children"]
+            },
+            "description": "Create a child profile using the richer `allergens` array format which allows specifying per-allergen `severity` and `notes`.\n\n`severity` values: `intolerance` | `allergy` | `severe`\n\nIf both `allergens` and `allergen_ids` are provided, the `allergens` array takes precedence."
           }
         },
         {
           "name": "List Children",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/children",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/children",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children"]
+            },
+            "description": "Returns all children belonging to the authenticated user.\n\nEach child includes nested `allergens`, `school_rules`, and `avatar` objects."
           }
         },
         {
           "name": "Update Child",
           "request": {
             "method": "PATCH",
-            "url": "{{base_url}}/api/children/{{child_id}}",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Lily\",\n  \"date_of_birth\": \"2017-03-20\",\n  \"avatar_id\": 2,\n  \"school_rule_ids\": [1, 3]\n}"
+              "raw": "{\n  \"name\": \"Lily Rose\",\n  \"date_of_birth\": \"2017-03-20\",\n  \"avatar_id\": 2,\n  \"school_rule_ids\": [1, 3, 6]\n}"
             },
-            "description": "All fields optional. To clear avatar, send avatar_id: null. school_rule_ids replaces the child's current school rules entirely."
+            "url": {
+              "raw": "{{base_url}}/api/children/{{child_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children", "{{child_id}}"]
+            },
+            "description": "Update a child profile. Requires auth. Must own the child.\n\nAll fields optional: `name`, `date_of_birth`, `avatar_id` (pass null to clear), `school_rule_ids`.\n\nNote: `school_rule_ids` fully replaces the child's current rules (pass empty array `[]` to clear all rules).\n\nTo update allergens use the POST/DELETE child allergen endpoints instead.\n\nHTTP 404 if child not found or not owned by caller."
           }
         },
         {
           "name": "Delete Child",
           "request": {
             "method": "DELETE",
-            "url": "{{base_url}}/api/children/{{child_id}}",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/children/{{child_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children", "{{child_id}}"]
+            },
+            "description": "Delete a child profile and cascade-delete all related allergens, school rules, and lunchbox sessions. Requires auth. Must own the child.\n\nHTTP 204 on success."
           }
         },
         {
           "name": "Add Allergen to Child",
           "request": {
             "method": "POST",
-            "url": "{{base_url}}/api/children/{{child_id}}/allergens",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"allergen_id\": 1,\n  \"severity\": \"severe\",\n  \"notes\": \"EpiPen required. Avoid all peanut traces.\"\n}"
+              "raw": "{\n  \"allergen_id\": {{allergen_id}},\n  \"severity\": \"severe\",\n  \"notes\": \"EpiPen required. Avoid all traces.\"\n}"
             },
-            "description": "allergen_id 1 = Peanuts. Get IDs from GET /api/allergens."
+            "url": {
+              "raw": "{{base_url}}/api/children/{{child_id}}/allergens",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children", "{{child_id}}", "allergens"]
+            },
+            "description": "Add or update an allergen on a child profile. Requires auth.\n\nRequired: `allergen_id` (integer, from GET /api/allergens).\nOptional: `severity` (`intolerance` | `allergy` | `severe`, default `allergy`), `notes` (max 255 chars).\n\nIf the allergen already exists on the child, its severity and notes are updated (upsert).\n\nReturns the full allergen list for the child.\n\nHTTP 404 if child or allergen not found."
           }
         },
         {
           "name": "Remove Allergen from Child",
           "request": {
             "method": "DELETE",
-            "url": "{{base_url}}/api/children/{{child_id}}/allergens/{{allergen_id}}",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/children/{{child_id}}/allergens/{{allergen_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children", "{{child_id}}", "allergens", "{{allergen_id}}"]
+            },
+            "description": "Remove a specific allergen from a child profile. Requires auth.\n\nHTTP 204 on success. HTTP 404 if child not found or not owned by caller."
           }
         }
       ]
@@ -396,76 +554,139 @@
           "name": "Create Session (generate lunchbox)",
           "event": [{ "listen": "test", "script": { "exec": [
             "const json = pm.response.json();",
-            "if (json.data && json.data.session) pm.collectionVariables.set('session_id', json.data.session.id);"
+            "if (json.data && json.data.session) pm.collectionVariables.set('session_id', String(json.data.session.id));"
           ], "type": "text/javascript" } }],
           "request": {
             "method": "POST",
-            "url": "{{base_url}}/api/lunchbox/sessions",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "lunchbox",              "type": "file",  "src": "",        "description": "Required: photo of the empty lunchbox" },
-                { "key": "ingredients",           "type": "file",  "src": "",        "description": "Optional: up to 5 ingredient images" },
-                { "key": "child_id",              "type": "text",  "value": "{{child_id}}", "description": "Optional: child profile ID" },
-                { "key": "notes",                 "type": "text",  "value": "Please make it colourful and fun!", "description": "Optional: parent notes" },
-                { "key": "prep_time_minutes",     "type": "text",  "value": "10",    "description": "Optional: max prep time" },
-                { "key": "nutrition_goal_override","type": "text", "value": "",      "description": "Optional: override child's nutrition goal for this session" },
-                { "key": "dislikes_override",     "type": "text",  "value": "",      "description": "Optional: override child's dislikes for this session" },
-                { "key": "school_rules_override", "type": "text",  "value": "",      "description": "Optional: override school rules for this session" },
-                { "key": "allergen_override_ids", "type": "text",  "value": "",      "description": "Optional: JSON array of extra allergen IDs e.g. [1,3]" }
+                {
+                  "key": "lunchbox",
+                  "type": "file",
+                  "src": "",
+                  "description": "REQUIRED — photo of the empty lunchbox (JPEG / PNG / WebP, max 10 MB)"
+                },
+                {
+                  "key": "ingredients",
+                  "type": "file",
+                  "src": "",
+                  "description": "Optional — ingredient photos available in the fridge (up to 5 files, JPEG / PNG / WebP)"
+                },
+                {
+                  "key": "child_id",
+                  "type": "text",
+                  "value": "{{child_id}}",
+                  "description": "Optional — child profile ID. If provided, child's allergens, school rules, and nutrition goals are included in the AI prompt."
+                },
+                {
+                  "key": "notes",
+                  "type": "text",
+                  "value": "Please make it colourful and fun!",
+                  "description": "Optional — free-text parent notes passed to the AI"
+                },
+                {
+                  "key": "prep_time_minutes",
+                  "type": "text",
+                  "value": "10",
+                  "description": "Optional — maximum preparation time in minutes (tinyint, 0–255)"
+                },
+                {
+                  "key": "nutrition_goal_override",
+                  "type": "text",
+                  "value": "",
+                  "description": "Optional — override the child's default nutrition goal for this session. Use a goal_key value (e.g. 'high_protein', 'low_sugar')"
+                },
+                {
+                  "key": "dislikes_override",
+                  "type": "text",
+                  "value": "",
+                  "description": "Optional — free-text list of foods the child dislikes for this session (overrides child profile)"
+                },
+                {
+                  "key": "school_rules_override",
+                  "type": "text",
+                  "value": "",
+                  "description": "Optional — free-text school rule notes for this session (overrides child profile rules)"
+                },
+                {
+                  "key": "allergen_override_ids",
+                  "type": "text",
+                  "value": "",
+                  "description": "Optional — JSON array of extra allergen IDs to add for this session only. Example: [1,3,5]. These are stored in session_allergen_overrides and merged with child allergens during AI analysis."
+                }
               ]
             },
-            "description": "Upload lunchbox image + optional ingredient images. The AI pipeline runs synchronously and returns the filled lunchbox image as base64 in `filledLunchboxUrl`."
+            "url": {
+              "raw": "{{base_url}}/api/lunchbox/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "lunchbox", "sessions"]
+            },
+            "description": "Upload a lunchbox image (and optional ingredient photos) to trigger the full AI pipeline.\n\nPipeline steps:\n1. GPT-4o vision analyzes the lunchbox shape, compartments, and available ingredients\n2. GPT-image-1 generates a filled lunchbox image\n3. Result is persisted to `lunchbox_results` and session status set to `completed`\n\nRuntime: ~25–60 seconds (synchronous).\n\nResponse fields:\n- `session` — full session record\n- `filledLunchboxUrl` — base64 data-URI of the generated lunchbox image\n- `foodItems` — array of suggested food items\n- `lunchboxDescription` — AI description of the lunchbox\n- `compartmentCount` — detected number of compartments\n- `detectedShape` — e.g. 'rectangular', 'round'\n- `detectedOrientation` — e.g. 'landscape', 'portrait'\n- `generatedImageAnalysis` — analysis of the generated image\n- `generationAttempts` — array of attempt summaries\n- `processingMs` — total pipeline time in milliseconds\n\nHTTP 400 if lunchbox image is missing. HTTP 404 if child_id not found."
           }
         },
         {
           "name": "Get Session History",
           "request": {
             "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{base_url}}/api/lunchbox/sessions?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "lunchbox", "sessions"],
               "query": [
-                { "key": "page",     "value": "1" },
-                { "key": "limit",    "value": "10" },
-                { "key": "child_id", "value": "{{child_id}}", "disabled": true,
-                  "description": "Filter sessions by child" }
+                { "key": "page",     "value": "1",  "description": "Page number (1-based)" },
+                { "key": "limit",    "value": "10", "description": "Items per page (default 10)" },
+                { "key": "child_id", "value": "",   "disabled": true,
+                  "description": "Filter sessions by child ID" }
               ]
             },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
-          }
-        },
-        {
-          "name": "Get Single Session",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/api/lunchbox/sessions/{{session_id}}",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "description": "Returns session + ingredient images + AI result (includes generated image base64)."
-          }
-        },
-        {
-          "name": "Delete Session",
-          "request": {
-            "method": "DELETE",
-            "url": "{{base_url}}/api/lunchbox/sessions/{{session_id}}",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "description": "Deletes the session record from DB and removes all associated image files from disk."
+            "description": "Returns paginated lunchbox session history for the authenticated user.\n\nResponse: `{ data: { sessions, total, page, limit, totalPages } }`\n\nUse `child_id` query param to filter sessions by a specific child."
           }
         },
         {
           "name": "Get Session History (filtered by child)",
           "request": {
             "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{base_url}}/api/lunchbox/sessions?child_id={{child_id}}&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "lunchbox", "sessions"],
               "query": [
-                { "key": "child_id", "value": "{{child_id}}" },
+                { "key": "child_id", "value": "{{child_id}}", "description": "Filter by child ID" },
                 { "key": "page",     "value": "1" },
                 { "key": "limit",    "value": "10" }
               ]
             },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "description": "Same as Get Session History but filtered to a specific child."
+          }
+        },
+        {
+          "name": "Get Single Session",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/lunchbox/sessions/{{session_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "lunchbox", "sessions", "{{session_id}}"]
+            },
+            "description": "Returns a single lunchbox session by ID.\n\nIncludes the full AI result:\n- `ai_text_response` — AI description\n- `suggested_items` — JSON array of food items\n- `generated_image_b64` — base64 data-URI of the generated lunchbox image\n- `processing_ms`, `ai_model`, `tokens_used`\n\nAlso includes ingredient images and session allergen overrides.\n\nHTTP 404 if session not found or not owned by caller."
+          }
+        },
+        {
+          "name": "Delete Session",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/lunchbox/sessions/{{session_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "lunchbox", "sessions", "{{session_id}}"]
+            },
+            "description": "Delete a lunchbox session by ID. Requires auth. Must own the session.\n\nAlso deletes all associated files from disk (lunchbox image, ingredient images).\n\nHTTP 204 on success. HTTP 404 if session not found."
           }
         }
       ]
