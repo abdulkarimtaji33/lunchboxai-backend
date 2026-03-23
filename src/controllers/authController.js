@@ -12,7 +12,8 @@ function signToken(userId) {
 
 async function register(req, res, next) {
   try {
-    const { email, password, full_name } = req.body;
+    const { email, password, full_name, name: nameField } = req.body;
+    const resolvedName = full_name || nameField;
 
     const existing = await User.findByEmail(email);
     if (existing) {
@@ -20,7 +21,7 @@ async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const userId       = await User.createLocal({ email, passwordHash, name: full_name });
+    const userId       = await User.createLocal({ email, passwordHash, name: resolvedName });
     const user         = await User.findById(userId);
     const token        = signToken(userId);
 
@@ -64,11 +65,12 @@ async function getProfile(req, res, next) {
 
 async function updateProfile(req, res, next) {
   try {
-    const { full_name } = req.body;
-    if (!full_name) {
-      return res.status(400).json(formatError('full_name is required', 'VALIDATION_ERROR'));
+    const { full_name, name: nameField } = req.body;
+    const resolvedName = full_name || nameField;
+    if (!resolvedName) {
+      return res.status(400).json(formatError('name or full_name is required', 'VALIDATION_ERROR'));
     }
-    await User.updateProfile(req.user.id, { name: full_name });
+    await User.updateProfile(req.user.id, { name: resolvedName });
     const updated = await User.findById(req.user.id);
     res.json(formatResponse({ user: updated }));
   } catch (err) {
