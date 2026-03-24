@@ -5,8 +5,13 @@ const { formatResponse } = require('../utils/helpers');
 
 async function listAvatars(req, res, next) {
   try {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const avatars = await Avatar.findAll();
-    res.json(formatResponse({ avatars }));
+    const withUrls = avatars.map(av => ({
+      ...av,
+      image_url: `${baseUrl}/avatars/${av.filename}`,
+    }));
+    res.json(formatResponse({ avatars: withUrls }));
   } catch (err) {
     next(err);
   }

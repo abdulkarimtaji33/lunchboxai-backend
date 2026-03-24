@@ -43,7 +43,7 @@ async function attachRelations(children) {
   const placeholders = ids.map(() => '?').join(',');
 
   const [allergenRows] = await pool.execute(
-    `SELECT ca.child_id, a.id, a.name, a.category, ca.severity, ca.notes
+    `SELECT ca.child_id, a.id, a.name, a.icon, a.category, ca.severity, ca.notes
      FROM child_allergens ca
      JOIN allergens a ON a.id = ca.allergen_id
      WHERE ca.child_id IN (${placeholders})
@@ -64,7 +64,7 @@ async function attachRelations(children) {
   const allergenMap = {};
   for (const r of allergenRows) {
     if (!allergenMap[r.child_id]) allergenMap[r.child_id] = [];
-    allergenMap[r.child_id].push({ id: r.id, name: r.name, category: r.category, severity: r.severity, notes: r.notes });
+    allergenMap[r.child_id].push({ id: r.id, name: r.name, icon: r.icon, category: r.category, severity: r.severity, notes: r.notes });
   }
   const ruleMap = {};
   for (const r of ruleRows) {
@@ -111,7 +111,7 @@ async function removeAllergen(childId, allergenId) {
 
 async function getAllergens(childId) {
   const [rows] = await pool.execute(
-    `SELECT a.id, a.name, a.category, ca.severity, ca.notes
+    `SELECT a.id, a.name, a.icon, a.category, ca.severity, ca.notes
      FROM child_allergens ca
      JOIN allergens a ON a.id = ca.allergen_id
      WHERE ca.child_id = ?

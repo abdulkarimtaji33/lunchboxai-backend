@@ -4,9 +4,24 @@ const Child    = require('../models/Child');
 const Allergen = require('../models/Allergen');
 const { formatResponse, formatError } = require('../utils/helpers');
 
+function enrichChild(child, baseUrl) {
+  if (!child) return child;
+  return {
+    ...child,
+    avatar: child.avatar
+      ? { ...child.avatar, image_url: `${baseUrl}/avatars/${child.avatar.filename}` }
+      : null,
+    allergens: (child.allergens || []).map(a => ({
+      ...a,
+      image_url: a.icon ? `${baseUrl}/allergens/${a.icon}` : null,
+    })),
+  };
+}
+
 async function addChild(req, res, next) {
   try {
     const { name, date_of_birth, avatar_id, allergen_ids, allergens: allergenList, school_rule_ids } = req.body;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const childId = await Child.create({
       userId:      req.user.id,
@@ -30,7 +45,7 @@ async function addChild(req, res, next) {
     }
 
     const child = await Child.findByIdAndUser(childId, req.user.id);
-    res.status(201).json(formatResponse({ child }));
+    res.status(201).json(formatResponse({ child: enrichChild(child, baseUrl) }));
   } catch (err) {
     next(err);
   }
@@ -38,8 +53,9 @@ async function addChild(req, res, next) {
 
 async function listChildren(req, res, next) {
   try {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const children = await Child.findByUser(req.user.id);
-    res.json(formatResponse({ children }));
+    res.json(formatResponse({ children: children.map(c => enrichChild(c, baseUrl)) }));
   } catch (err) {
     next(err);
   }
@@ -49,6 +65,7 @@ async function updateChild(req, res, next) {
   try {
     const child = await Child.findByIdAndUser(req.params.id, req.user.id);
     if (!child) return res.status(404).json(formatError('Child not found', 'NOT_FOUND'));
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const { name, date_of_birth, avatar_id, school_rule_ids, allergen_ids, allergens: allergenList } = req.body;
     await Child.update(child.id, { name, date_of_birth, avatar_id });
@@ -64,7 +81,7 @@ async function updateChild(req, res, next) {
     }
 
     const updated = await Child.findByIdAndUser(child.id, req.user.id);
-    res.json(formatResponse({ child: updated }));
+    res.json(formatResponse({ child: enrichChild(updated, baseUrl) }));
   } catch (err) {
     next(err);
   }
@@ -85,6 +102,7 @@ async function addAllergen(req, res, next) {
   try {
     const child = await Child.findByIdAndUser(req.params.id, req.user.id);
     if (!child) return res.status(404).json(formatError('Child not found', 'NOT_FOUND'));
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const { allergen_id, severity, notes } = req.body;
     const allergen = await Allergen.findById(allergen_id);
@@ -92,7 +110,11 @@ async function addAllergen(req, res, next) {
 
     await Child.addAllergen(child.id, allergen_id, severity, notes);
     const allergens = await Child.getAllergens(child.id);
-    res.json(formatResponse({ allergens }));
+    const withUrls = allergens.map(a => ({
+      ...a,
+      image_url: a.icon ? `${baseUrl}/allergens/${a.icon}` : null,
+    }));
+    res.json(formatResponse({ allergens: withUrls }));
   } catch (err) {
     next(err);
   }

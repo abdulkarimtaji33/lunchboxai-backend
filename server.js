@@ -28,7 +28,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- Serve uploaded files ---
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads',  express.static(path.join(__dirname, 'uploads')));
+app.use('/avatars',  express.static(path.join(__dirname, 'avatars')));
+app.use('/allergens', express.static(path.join(__dirname, 'allergens')));
 
 // --- Passport (no sessions — JWT only) ---
 app.use(passport.initialize());
