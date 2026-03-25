@@ -1,11 +1,14 @@
 'use strict';
 
 const OpenAI        = require('openai');
-const { OPENAI_API_KEY }          = require('../config/env');
+const { openrouter: { apiKey: openrouterKey } } = require('../config/env');
 const { resizeForApi, getMimeTypeFromPath } = require('./imageService');
 const NutritionGoal = require('../models/NutritionGoal');
 
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: openrouterKey,
+  baseURL: 'https://openrouter.ai/api/v1',
+});
 
 // --- Exact same vision prompt as working server.js ---
 const VISION_PROMPT = `Analyze this lunchbox image carefully and describe it. I should be able to recreate the lunchbox exactly. Start your response directly with the description.`;
@@ -83,20 +86,47 @@ async function buildChildContext({ child, allergens, sessionOverrides }) {
   return lines.join('\n');
 }
 
-async function analyzeLunchbox({ lunchboxImagePath, ingredientImagePaths = [], child, allergens = [], sessionOverrides = {} }) {
-  // Build image content blocks (exact same base64 logic as working server.js)
-  const buildImageBlock = async (filePath) => {
-    const buffer   = await resizeForApi(filePath);
-    const base64   = buffer.toString('base64');
-    const mimeType = getMimeTypeFromPath(filePath);
-    return {
-      type: 'image_url',
-      image_url: { url: `data:${mimeType};base64,${base64}` },
-    };
+const buildImageBlock = async (filePath) => {
+  const buffer   = await resizeForApi(filePath);
+  const base64   = buffer.toString('base64');
+  const mimeType = getMimeTypeFromPath(filePath);
+  return {
+    type: 'image_url',
+    image_url: { url: `data:${mimeType};base64,${base64}` },
   };
+};
 
-  const lunchboxBlock    = await buildImageBlock(lunchboxImagePath);
+// --- Identify ingredients from uploaded photos ---
+async function identifyIngredients(ingredientImagePaths) {
+  if (!ingredientImagePaths.length) return null;
+
+  console.log(`Identifying ingredients from ${ingredientImagePaths.length} image(s)...`);
+
   const ingredientBlocks = await Promise.all(ingredientImagePaths.map(buildImageBlock));
+
+  const response = await openai.chat.completions.create({
+    model: 'openai/gpt-4o',
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: 'Look at these ingredient images and list every food item you can identify. Return ONLY a comma-separated list of ingredient names, nothing else. Example: "chicken breast, cherry tomatoes, cucumber, cheddar cheese, apple slices"',
+        },
+        ...ingredientBlocks,
+      ],
+    }],
+    max_tokens: 200,
+    temperature: 0.1,
+  });
+
+  const result = (response.choices[0].message.content || '').trim();
+  console.log('Identified ingredients:', result);
+  return result;
+}
+
+async function analyzeLunchbox({ lunchboxImagePath, child, allergens = [], sessionOverrides = {} }) {
+  const lunchboxBlock = await buildImageBlock(lunchboxImagePath);
 
   const childContext = await buildChildContext({ child, allergens, sessionOverrides });
 
@@ -107,7 +137,6 @@ async function analyzeLunchbox({ lunchboxImagePath, ingredientImagePaths = [], c
   const content = [
     { type: 'text', text: textContent },
     lunchboxBlock,
-    ...ingredientBlocks,
   ];
 
   console.log('Step 1: Analyzing lunchbox with gpt-4o...');
@@ -127,4 +156,4 @@ async function analyzeLunchbox({ lunchboxImagePath, ingredientImagePaths = [], c
   return { lunchboxDescription, compartmentCount, shape, orientation };
 }
 
-module.exports = { analyzeLunchbox };
+module.exports = { analyzeLunchbox, identifyIngredients };

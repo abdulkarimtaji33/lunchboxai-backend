@@ -4,12 +4,13 @@ const router = require('express').Router();
 const { authenticate } = require('../middleware/authMiddleware');
 const { upload }       = require('../middleware/uploadMiddleware');
 const {
-  createSession, getHistory, getSession, deleteSession,
+  createSession, createSessionOpenRouter, getHistory, getSession, deleteSession,
 } = require('../controllers/lunchboxController');
 
 router.use(authenticate);
 
-router.post('/sessions',     upload, createSession);
+router.post('/sessions',            upload, createSession);
+router.post('/sessions/openrouter', upload, createSessionOpenRouter);
 router.get('/sessions',      getHistory);
 router.get('/sessions/:id',  getSession);
 router.delete('/sessions/:id', deleteSession);
