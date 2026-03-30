@@ -25,4 +25,6 @@ const upload = multerInstance.fields([
   { name: 'ingredients', maxCount: 5 },
 ]);
 
-module.exports = { upload };
+const uploadSingle = multerInstance.single('image');
+
+module.exports = { upload, uploadSingle };

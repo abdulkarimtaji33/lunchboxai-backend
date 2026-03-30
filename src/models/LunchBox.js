@@ -3,16 +3,24 @@
 const pool = require('../config/database');
 
 async function createSession(conn, { userId, childId, lunchboxImagePath, notes, dislikesOverride,
-  schoolRulesOverride, prepTimeMinutes, nutritionGoalOverride }) {
+  schoolRulesOverride, prepTimeMinutes, nutritionGoalOverride, plannedAt }) {
   const [result] = await conn.execute(
     `INSERT INTO lunchbox_sessions
        (user_id, child_id, lunchbox_image_path, notes, dislikes_override,
-        school_rules_override, prep_time_minutes, nutrition_goal_override, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        school_rules_override, prep_time_minutes, nutrition_goal_override, planned_at, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
     [userId, childId || null, lunchboxImagePath, notes || null, dislikesOverride || null,
-     schoolRulesOverride || null, prepTimeMinutes || null, nutritionGoalOverride || null]
+     schoolRulesOverride || null, prepTimeMinutes || null, nutritionGoalOverride || null, plannedAt || null]
   );
   return result.insertId;
+}
+
+async function setPlanDate(sessionId, userId, plannedAt) {
+  const [result] = await pool.execute(
+    'UPDATE lunchbox_sessions SET planned_at = ? WHERE id = ? AND user_id = ?',
+    [plannedAt || null, sessionId, userId]
+  );
+  return result.affectedRows > 0;
 }
 
 async function insertIngredientImages(conn, sessionId, imagePaths) {
@@ -198,5 +206,5 @@ function normalizeResult(row) {
 module.exports = {
   createSession, insertIngredientImages, insertSessionAllergenOverrides,
   updateStatus, attachResult, findByUser, findByIdAndUser,
-  getFilePaths, resolveAllergens, deleteById,
+  getFilePaths, resolveAllergens, deleteById, setPlanDate,
 };

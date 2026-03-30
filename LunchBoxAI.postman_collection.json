@@ -13,7 +13,9 @@
     { "key": "food_item_id",       "value": "1",                     "type": "string" },
     { "key": "nutrition_goal_id",  "value": "1",                     "type": "string" },
     { "key": "allergen_id",        "value": "1",                     "type": "string",
-      "description": "Master-data allergen ID. 1=Peanuts, 2=Tree Nuts, 3=Milk/Dairy, 4=Eggs, 5=Wheat/Gluten, 6=Soy, 7=Fish, 8=Shellfish, 9=Sesame, 10=Mustard, 11=Celery, 12=Lupin, 13=Sulphites, 14=Corn, 15=Latex-Fruit. Set manually before calling child-allergen endpoints." }
+      "description": "Master-data allergen ID. 1=Peanuts, 2=Tree Nuts, 3=Milk/Dairy, 4=Eggs, 5=Wheat/Gluten, 6=Soy, 7=Fish, 8=Shellfish, 9=Sesame, 10=Mustard, 11=Celery, 12=Lupin, 13=Sulphites, 14=Corn, 15=Latex-Fruit. Set manually before calling child-allergen endpoints." },
+    { "key": "lunchbox_id",        "value": "1",                     "type": "string",
+      "description": "child_lunchboxes record ID. Set after uploading a child base lunchbox." }
   ],
   "item": [
 
@@ -621,6 +623,24 @@
                   "type": "text",
                   "value": "false",
                   "description": "Optional — set to true to use the image edit API (gpt-image-1 edit), which fills the actual lunchbox photo instead of generating a new image from scratch. Default: false (uses image generate)."
+                },
+                {
+                  "key": "planned_at",
+                  "type": "text",
+                  "value": "",
+                  "description": "Optional — ISO 8601 datetime string to schedule this session for a specific date/time. Example: 2026-04-01T07:30:00.000Z. Can also be set/updated after creation via PATCH /sessions/:id/plan."
+                },
+                {
+                  "key": "use_child_default_lunchbox",
+                  "type": "text",
+                  "value": "false",
+                  "description": "Optional — set to true to skip the lunchbox file upload and use the child's saved default base lunchbox instead. Requires child_id. If child_lunchbox_id is also provided, uses that specific saved lunchbox."
+                },
+                {
+                  "key": "child_lunchbox_id",
+                  "type": "text",
+                  "value": "",
+                  "description": "Optional — ID of a specific child_lunchbox record to use as the lunchbox template. Only relevant when use_child_default_lunchbox=true. If omitted, uses the child's default_lunchbox_id."
                 }
               ]
             },
@@ -693,6 +713,101 @@
               "path": ["api", "lunchbox", "sessions", "{{session_id}}"]
             },
             "description": "Delete a lunchbox session by ID. Requires auth. Must own the session.\n\nAlso deletes all associated files from disk (lunchbox image, ingredient images).\n\nHTTP 204 on success. HTTP 404 if session not found."
+          }
+        },
+        {
+          "name": "Plan Session (set date)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planned_at\": \"2026-04-01T07:30:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lunchbox/sessions/{{session_id}}/plan",
+              "host": ["{{base_url}}"],
+              "path": ["api", "lunchbox", "sessions", "{{session_id}}", "plan"]
+            },
+            "description": "Set or update the planned date/time for an existing session.\n\nBody fields:\n- `planned_at` — ISO 8601 datetime string. Pass null or omit to clear the plan date.\n\nReturns the updated session object.\n\nHTTP 404 if session not found or not owned by caller."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Child Lunchboxes",
+      "item": [
+        {
+          "name": "List Child Lunchboxes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/children/{{child_id}}/lunchboxes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children", "{{child_id}}", "lunchboxes"]
+            },
+            "description": "Returns all saved base lunchboxes for a child.\n\nEach item includes:\n- `id` — lunchbox record ID\n- `child_id`\n- `label` — optional name/description\n- `image_path` — relative path\n- `image_url` — full URL to the image\n- `is_default` — true if this is the child's default lunchbox\n- `created_at`\n\nHTTP 404 if child not found."
+          }
+        },
+        {
+          "name": "Upload Child Lunchbox",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "",
+                  "description": "REQUIRED — lunchbox photo (JPEG / PNG / WebP, max 10 MB)"
+                },
+                {
+                  "key": "label",
+                  "type": "text",
+                  "value": "Blue 3-compartment bento",
+                  "description": "Optional — friendly name for this lunchbox"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/children/{{child_id}}/lunchboxes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children", "{{child_id}}", "lunchboxes"]
+            },
+            "description": "Upload a new base lunchbox image for a child.\n\nReturns `{ lunchboxId, lunchboxes }` — the new ID and the full updated list.\n\nHTTP 400 if image is missing. HTTP 404 if child not found."
+          }
+        },
+        {
+          "name": "Set Default Child Lunchbox",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/children/{{child_id}}/lunchboxes/1/set-default",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children", "{{child_id}}", "lunchboxes", "1", "set-default"]
+            },
+            "description": "Set a specific saved lunchbox as the child's default.\n\nUpdates `children.default_lunchbox_id`. The default is used automatically when `use_child_default_lunchbox=true` is passed to Create Session without a specific `child_lunchbox_id`.\n\nReturns the updated list of lunchboxes with refreshed `is_default` flags.\n\nHTTP 404 if child or lunchbox not found."
+          }
+        },
+        {
+          "name": "Delete Child Lunchbox",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/children/{{child_id}}/lunchboxes/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "children", "{{child_id}}", "lunchboxes", "1"]
+            },
+            "description": "Remove a saved base lunchbox from a child. Also deletes the image file from disk.\n\nIf the deleted lunchbox was the child's default, `default_lunchbox_id` is cleared automatically.\n\nHTTP 204 on success. HTTP 404 if child or lunchbox not found."
           }
         }
       ]
