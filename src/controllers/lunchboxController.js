@@ -6,7 +6,7 @@ const Child        = require('../models/Child');
 const ChildLunchbox = require('../models/ChildLunchbox');
 const { analyzeLunchbox, identifyIngredients } = require('../services/aiService');
 const { generateFilledLunchbox, generateFilledLunchboxEdit, generateFilledLunchboxOpenRouter } = require('../services/imageGenService');
-const { deleteFiles }           = require('../services/imageService');
+const { deleteFiles, saveGeneratedLunchboxImage, buildPublicFileUrl } = require('../services/imageService');
 const { formatResponse, formatError, paginate } = require('../utils/helpers');
 
 async function createSession(req, res, next) {
@@ -132,6 +132,11 @@ async function createSession(req, res, next) {
 
     const processingMs = Date.now() - startTime;
 
+    const generatedImagePath = await saveGeneratedLunchboxImage({
+      dataUrl: filledImageDataUrl,
+      base64: filledImageB64,
+    });
+
     // Step 3: Persist result
     await conn.beginTransaction();
     await LunchBox.attachResult(conn, sessionId, {
@@ -140,8 +145,7 @@ async function createSession(req, res, next) {
       nutritionNotes:    null,
       arrangementDesc:   lunchboxDescription,
       funNote:           null,
-      generatedImageB64: filledImageB64,
-      generatedImagePath:null,
+      generatedImagePath,
       aiModel:           'gpt-4o + gpt-image-1',
       tokensUsed:        null,
       processingMs,
@@ -153,7 +157,7 @@ async function createSession(req, res, next) {
 
     res.status(201).json(formatResponse({
       session,
-      filledLunchboxUrl: filledImageDataUrl,
+      filledLunchboxUrl: buildPublicFileUrl(generatedImagePath),
       foodItems,
       lunchboxDescription,
       compartmentCount,
@@ -275,17 +279,22 @@ async function createSessionOpenRouter(req, res, next) {
 
     const processingMs = Date.now() - startTime;
 
+    const generatedImagePath = await saveGeneratedLunchboxImage({
+      dataUrl: filledImageDataUrl,
+      base64: filledImageB64,
+    });
+
     await conn.beginTransaction();
     await LunchBox.attachResult(conn, sessionId, {
       aiTextResponse: lunchboxDescription, suggestedItems: foodItems, nutritionNotes: null,
-      arrangementDesc: lunchboxDescription, funNote: null, generatedImageB64: filledImageB64,
-      generatedImagePath: null, aiModel: 'gpt-4o + gpt-5-image-mini (openrouter)', tokensUsed: null, processingMs,
+      arrangementDesc: lunchboxDescription, funNote: null,
+      generatedImagePath, aiModel: 'gpt-4o + gpt-5-image-mini (openrouter)', tokensUsed: null, processingMs,
     });
     await LunchBox.updateStatus(conn, sessionId, 'completed');
     await conn.commit();
 
     const session = await LunchBox.findByIdAndUser(sessionId, req.user.id);
-    res.status(201).json(formatResponse({ session, filledLunchboxUrl: filledImageDataUrl, foodItems, lunchboxDescription, compartmentCount, detectedShape: shape, detectedOrientation: orientation, generatedImageAnalysis: generatedAnalysis, generationAttempts: attemptSummaries, processingMs }));
+    res.status(201).json(formatResponse({ session, filledLunchboxUrl: buildPublicFileUrl(generatedImagePath), foodItems, lunchboxDescription, compartmentCount, detectedShape: shape, detectedOrientation: orientation, generatedImageAnalysis: generatedAnalysis, generationAttempts: attemptSummaries, processingMs }));
 
   } catch (err) {
     try { await conn.rollback(); } catch {}

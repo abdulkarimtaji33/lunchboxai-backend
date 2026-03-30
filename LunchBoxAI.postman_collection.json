@@ -410,7 +410,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "avatars"]
             },
-            "description": "Returns all active avatars. Requires auth.\n\nResponse: `{ data: { avatars: [ { id, name, filename, image_data, is_active, created_at } ] } }`\n\nEach avatar includes `image_data` as a base64 data-URI (e.g. `data:image/png;base64,...`).\nUse directly as `<Image source={{ uri: item.image_data }} />` in React Native.\n\nSeeded: Lion(1), Panda(2), Fox(3), Bunny(4), Bear(5), Cat(6), Dog(7), Penguin(8).\nUse `id` as `avatar_id` when creating or updating a child profile."
+            "description": "Returns all active avatars. Requires auth.\n\nResponse: `{ data: { avatars: [ { id, name, filename, image_url, is_active, created_at } ] } }`\n\nEach avatar includes `image_url` — absolute URL to the PNG under `/avatars/` (static file).\n\nSeeded: Lion(1), Panda(2), Fox(3), Bunny(4), Bear(5), Cat(6), Dog(7), Penguin(8).\nUse `id` as `avatar_id` when creating or updating a child profile."
           }
         }
       ]
@@ -649,7 +649,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "lunchbox", "sessions"]
             },
-            "description": "Upload a lunchbox image (and optional ingredient photos) to trigger the full AI pipeline.\n\nPipeline steps:\n1. GPT-4o vision analyzes the lunchbox shape, compartments, and available ingredients\n2. GPT-image-1 generates a filled lunchbox image\n3. Result is persisted to `lunchbox_results` and session status set to `completed`\n\nRuntime: ~25–60 seconds (synchronous).\n\nResponse fields:\n- `session` — full session record\n- `filledLunchboxUrl` — base64 data-URI of the generated lunchbox image\n- `foodItems` — array of suggested food items\n- `lunchboxDescription` — AI description of the lunchbox\n- `compartmentCount` — detected number of compartments\n- `detectedShape` — e.g. 'rectangular', 'round'\n- `detectedOrientation` — e.g. 'landscape', 'portrait'\n- `generatedImageAnalysis` — analysis of the generated image\n- `generationAttempts` — array of attempt summaries\n- `processingMs` — total pipeline time in milliseconds\n\nHTTP 400 if lunchbox image is missing. HTTP 404 if child_id not found."
+            "description": "Upload a lunchbox image (and optional ingredient photos) to trigger the full AI pipeline.\n\nPipeline steps:\n1. GPT-4o vision analyzes the lunchbox shape, compartments, and available ingredients\n2. GPT-image-1 generates a filled lunchbox image\n3. Result is persisted to `lunchbox_results` and session status set to `completed`\n\nRuntime: ~25–60 seconds (synchronous).\n\nResponse fields:\n- `session` — full session record\n- `filledLunchboxUrl` — HTTP URL of the saved generated PNG (under `/uploads/`)\n- `foodItems` — array of suggested food items\n- `lunchboxDescription` — AI description of the lunchbox\n- `compartmentCount` — detected number of compartments\n- `detectedShape` — e.g. 'rectangular', 'round'\n- `detectedOrientation` — e.g. 'landscape', 'portrait'\n- `generatedImageAnalysis` — analysis of the generated image\n- `generationAttempts` — array of attempt summaries\n- `processingMs` — total pipeline time in milliseconds\n\nHTTP 400 if lunchbox image is missing. HTTP 404 if child_id not found."
           }
         },
         {
@@ -699,7 +699,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "lunchbox", "sessions", "{{session_id}}"]
             },
-            "description": "Returns a single lunchbox session by ID.\n\nIncludes the full AI result:\n- `ai_text_response` — AI description\n- `suggested_items` — JSON array of food items\n- `generated_image_b64` — base64 data-URI of the generated lunchbox image\n- `processing_ms`, `ai_model`, `tokens_used`\n\nAlso includes ingredient images and session allergen overrides.\n\nHTTP 404 if session not found or not owned by caller."
+            "description": "Returns a single lunchbox session by ID.\n\nIncludes the full AI result:\n- `ai_text_response` — AI description\n- `suggested_items` — JSON array of food items\n- `generated_image_path` — stored relative path; `generated_image_url` — full URL to the PNG\n- `processing_ms`, `ai_model`, `tokens_used`\n\nAlso includes ingredient images and session allergen overrides.\n\nHTTP 404 if session not found or not owned by caller."
           }
         },
         {

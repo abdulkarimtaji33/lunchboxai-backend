@@ -1,6 +1,7 @@
 'use strict';
 
 const pool = require('../config/database');
+const { buildPublicFileUrl } = require('../services/imageService');
 
 async function createSession(conn, { userId, childId, lunchboxImagePath, notes, dislikesOverride,
   schoolRulesOverride, prepTimeMinutes, nutritionGoalOverride, plannedAt }) {
@@ -51,13 +52,13 @@ async function updateStatus(conn, sessionId, status) {
 
 async function attachResult(conn, sessionId, {
   aiTextResponse, suggestedItems, nutritionNotes, arrangementDesc,
-  funNote, generatedImageB64, generatedImagePath, aiModel, tokensUsed, processingMs,
+  funNote, generatedImagePath, aiModel, tokensUsed, processingMs,
 }) {
   await conn.execute(
     `INSERT INTO lunchbox_results
        (session_id, ai_text_response, suggested_items, nutrition_notes, arrangement_desc,
-        fun_note, generated_image_b64, generated_image_path, ai_model, tokens_used, processing_ms)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        fun_note, generated_image_path, ai_model, tokens_used, processing_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       sessionId,
       aiTextResponse,
@@ -65,7 +66,6 @@ async function attachResult(conn, sessionId, {
       nutritionNotes    || null,
       arrangementDesc   || null,
       funNote           || null,
-      generatedImageB64 || null,
       generatedImagePath|| null,
       aiModel           || null,
       tokensUsed        || null,
@@ -92,7 +92,7 @@ async function findByUser(userId, { page, limit, offset, childId }) {
 
   const [rows] = await pool.execute(
     `SELECT s.*, c.name AS child_name,
-       r.suggested_items, r.nutrition_notes, r.fun_note, r.generated_image_path, r.generated_image_b64
+       r.suggested_items, r.nutrition_notes, r.fun_note, r.generated_image_path
      FROM lunchbox_sessions s
      LEFT JOIN children c        ON c.id = s.child_id
      LEFT JOIN lunchbox_results r ON r.session_id = s.id
@@ -124,7 +124,7 @@ async function findByIdAndUser(sessionId, userId) {
 
   const [results] = await pool.execute(
     `SELECT id, ai_text_response, suggested_items, nutrition_notes, arrangement_desc,
-            fun_note, generated_image_b64, generated_image_path, ai_model, tokens_used, processing_ms, created_at
+            fun_note, generated_image_path, ai_model, tokens_used, processing_ms, created_at
      FROM lunchbox_results WHERE session_id = ?`,
     [sessionId]
   );
@@ -193,12 +193,18 @@ function normalizeSession(row) {
   if (row.suggested_items && typeof row.suggested_items === 'string') {
     try { row.suggested_items = JSON.parse(row.suggested_items); } catch { row.suggested_items = null; }
   }
+  if (row.generated_image_path) {
+    row.generated_image_url = buildPublicFileUrl(row.generated_image_path);
+  }
   return row;
 }
 
 function normalizeResult(row) {
   if (row.suggested_items && typeof row.suggested_items === 'string') {
     try { row.suggested_items = JSON.parse(row.suggested_items); } catch { row.suggested_items = null; }
+  }
+  if (row.generated_image_path) {
+    row.generated_image_url = buildPublicFileUrl(row.generated_image_path);
   }
   return row;
 }
