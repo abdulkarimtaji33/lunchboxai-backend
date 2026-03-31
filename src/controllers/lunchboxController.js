@@ -3,7 +3,8 @@
 const pool         = require('../config/database');
 const LunchBox     = require('../models/LunchBox');
 const Child        = require('../models/Child');
-const ChildLunchbox = require('../models/ChildLunchbox');
+const ChildLunchbox  = require('../models/ChildLunchbox');
+const BaseLunchbox   = require('../models/BaseLunchbox');
 const { analyzeLunchbox, identifyIngredients } = require('../services/aiService');
 const { generateFilledLunchbox, generateFilledLunchboxEdit, generateFilledLunchboxOpenRouter } = require('../services/imageGenService');
 const { deleteFiles, saveGeneratedLunchboxImage, buildPublicFileUrl } = require('../services/imageService');
@@ -26,6 +27,7 @@ async function createSession(req, res, next) {
       planned_at,
       use_child_default_lunchbox,
       child_lunchbox_id,
+      base_lunchbox_id,
     } = req.body;
 
     // Resolve lunchbox image: uploaded file OR child's saved base lunchbox
@@ -39,7 +41,6 @@ async function createSession(req, res, next) {
       if (lbId) {
         lb = await ChildLunchbox.findById(lbId);
       } else {
-        // Use child's default
         const tempChild = await Child.findByIdAndUser(child_id, req.user.id);
         if (tempChild?.default_lunchbox_id) {
           lb = await ChildLunchbox.findById(tempChild.default_lunchbox_id);
@@ -47,6 +48,10 @@ async function createSession(req, res, next) {
       }
       if (!lb) return res.status(400).json(formatError('No base lunchbox found for this child', 'VALIDATION_ERROR'));
       lunchboxFilePath = lb.image_path;
+    } else if (base_lunchbox_id) {
+      const bl = await BaseLunchbox.findById(base_lunchbox_id);
+      if (!bl) return res.status(400).json(formatError('Base lunchbox not found', 'VALIDATION_ERROR'));
+      lunchboxFilePath = bl.image_path;
     } else {
       if (!req.files?.lunchbox?.[0]) {
         return res.status(400).json(formatError('Lunchbox image is required', 'VALIDATION_ERROR'));
@@ -77,6 +82,16 @@ async function createSession(req, res, next) {
       if (!child) return res.status(404).json(formatError('Child not found', 'NOT_FOUND'));
     }
 
+    // Resolve base lunchbox note for AI context
+    let baseLunchboxNote = null;
+    if (base_lunchbox_id) {
+      const bl = await BaseLunchbox.findById(base_lunchbox_id);
+      if (bl) {
+        baseLunchboxNote = `Container: ${bl.name} (${bl.container_type}, ${bl.compartments} compartment${bl.compartments > 1 ? 's' : ''}). ${bl.description || ''}`;
+      }
+    }
+    const effectiveNotes = [notes, baseLunchboxNote].filter(Boolean).join(' | ') || null;
+
     // --- BEGIN TRANSACTION ---
     await conn.beginTransaction();
 
@@ -84,12 +99,12 @@ async function createSession(req, res, next) {
       userId:               req.user.id,
       childId:              child?.id || null,
       lunchboxImagePath:    lunchboxFile.path,
-      notes,
-      dislikesOverride:     dislikes_override,
-      schoolRulesOverride:  school_rules_override,
-      prepTimeMinutes:      prep_time_minutes,
-      nutritionGoalOverride:nutrition_goal_override,
-      plannedAt:            planned_at || null,
+      notes:                effectiveNotes,
+      dislikesOverride:     dislikes_override     || null,
+      schoolRulesOverride:  school_rules_override || null,
+      prepTimeMinutes:      prep_time_minutes     || null,
+      nutritionGoalOverride:nutrition_goal_override || null,
+      plannedAt:            planned_at            || null,
     });
 
     await LunchBox.insertIngredientImages(conn, sessionId, ingredientFiles.map(f => f.path));
@@ -106,7 +121,7 @@ async function createSession(req, res, next) {
 
     const sessionOverrides = {
       dislikes_override, school_rules_override,
-      prep_time_minutes, nutrition_goal_override, notes,
+      prep_time_minutes, nutrition_goal_override, notes: effectiveNotes,
     };
 
     // Step 1: Analyse lunchbox shape + identify ingredients (in parallel)
@@ -235,7 +250,7 @@ async function createSessionOpenRouter(req, res, next) {
     uploadedPaths.push(lunchboxFile.path);
     ingredientFiles.forEach(f => uploadedPaths.push(f.path));
 
-    const { child_id, notes, dislikes_override, school_rules_override, prep_time_minutes, nutrition_goal_override, allergen_override_ids, planned_at } = req.body;
+    const { child_id, notes, dislikes_override, school_rules_override, prep_time_minutes, nutrition_goal_override, allergen_override_ids, planned_at, base_lunchbox_id: or_base_lunchbox_id } = req.body;
 
     let allergenIds = [];
     if (allergen_override_ids) {
@@ -248,11 +263,20 @@ async function createSessionOpenRouter(req, res, next) {
       if (!child) return res.status(404).json(formatError('Child not found', 'NOT_FOUND'));
     }
 
+    let orBaseLunchboxNote = null;
+    if (or_base_lunchbox_id) {
+      const bl = await BaseLunchbox.findById(or_base_lunchbox_id);
+      if (bl) {
+        orBaseLunchboxNote = `Container: ${bl.name} (${bl.container_type}, ${bl.compartments} compartment${bl.compartments > 1 ? 's' : ''}). ${bl.description || ''}`;
+      }
+    }
+    const orEffectiveNotes = [notes, orBaseLunchboxNote].filter(Boolean).join(' | ') || null;
+
     await conn.beginTransaction();
     sessionId = await LunchBox.createSession(conn, {
       userId: req.user.id, childId: child?.id || null, lunchboxImagePath: lunchboxFile.path,
-      notes, dislikesOverride: dislikes_override, schoolRulesOverride: school_rules_override,
-      prepTimeMinutes: prep_time_minutes, nutritionGoalOverride: nutrition_goal_override,
+      notes: orEffectiveNotes, dislikesOverride: dislikes_override || null, schoolRulesOverride: school_rules_override || null,
+      prepTimeMinutes: prep_time_minutes || null, nutritionGoalOverride: nutrition_goal_override || null,
       plannedAt: planned_at || null,
     });
     await LunchBox.insertIngredientImages(conn, sessionId, ingredientFiles.map(f => f.path));
@@ -261,7 +285,7 @@ async function createSessionOpenRouter(req, res, next) {
     await conn.commit();
 
     const allergens = await LunchBox.resolveAllergens(child?.id || 0, sessionId);
-    const sessionOverrides = { dislikes_override, school_rules_override, prep_time_minutes, nutrition_goal_override, notes };
+    const sessionOverrides = { dislikes_override, school_rules_override, prep_time_minutes, nutrition_goal_override, notes: orEffectiveNotes };
 
     const ingredientPaths = ingredientFiles.map(f => f.path);
     const [
@@ -322,4 +346,19 @@ async function planSession(req, res, next) {
   }
 }
 
-module.exports = { createSession, createSessionOpenRouter, getHistory, getSession, deleteSession, planSession };
+async function setFlag(req, res, next) {
+  try {
+    const { flag, value } = req.body;
+    const allowed = ['is_favorite', 'save_for_later'];
+    if (!allowed.includes(flag)) return res.status(400).json(formatError('Invalid flag', 'VALIDATION_ERROR'));
+    const session = await LunchBox.findByIdAndUser(req.params.id, req.user.id);
+    if (!session) return res.status(404).json(formatError('Session not found', 'NOT_FOUND'));
+    await LunchBox.setSessionFlag(req.params.id, req.user.id, flag, value);
+    const updated = await LunchBox.findByIdAndUser(req.params.id, req.user.id);
+    res.json(formatResponse({ session: updated }));
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { createSession, createSessionOpenRouter, getHistory, getSession, deleteSession, planSession, setFlag };

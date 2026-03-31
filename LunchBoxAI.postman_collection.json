@@ -641,6 +641,12 @@
                   "type": "text",
                   "value": "",
                   "description": "Optional — ID of a specific child_lunchbox record to use as the lunchbox template. Only relevant when use_child_default_lunchbox=true. If omitted, uses the child's default_lunchbox_id."
+                },
+                {
+                  "key": "base_lunchbox_id",
+                  "type": "text",
+                  "value": "",
+                  "description": "Optional — ID of a base_lunchboxes record (1–10). When provided, the container type and compartment info are appended to the AI notes to improve generation quality. Does NOT replace the uploaded photo."
                 }
               ]
             },
@@ -734,6 +740,46 @@
             },
             "description": "Set or update the planned date/time for an existing session.\n\nBody fields:\n- `planned_at` — ISO 8601 datetime string. Pass null or omit to clear the plan date.\n\nReturns the updated session object.\n\nHTTP 404 if session not found or not owned by caller."
           }
+        },
+        {
+          "name": "Set Session Flag (favorite)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flag\": \"is_favorite\",\n  \"value\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lunchbox/sessions/{{session_id}}/flag",
+              "host": ["{{base_url}}"],
+              "path": ["api", "lunchbox", "sessions", "{{session_id}}", "flag"]
+            },
+            "description": "Toggle a boolean flag on a session.\n\nBody fields:\n- `flag` — one of: `is_favorite`, `save_for_later`\n- `value` — boolean `true` or `false`\n\nReturns the updated session object.\n\nHTTP 400 if flag name is invalid. HTTP 404 if session not found or not owned by caller."
+          }
+        },
+        {
+          "name": "Set Session Flag (save for later)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flag\": \"save_for_later\",\n  \"value\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lunchbox/sessions/{{session_id}}/flag",
+              "host": ["{{base_url}}"],
+              "path": ["api", "lunchbox", "sessions", "{{session_id}}", "flag"]
+            },
+            "description": "Toggle save_for_later on a session. Set value to false to unmark.\n\nSee 'Set Session Flag (favorite)' for full documentation."
+          }
         }
       ]
     },
@@ -808,6 +854,25 @@
               "path": ["api", "children", "{{child_id}}", "lunchboxes", "1"]
             },
             "description": "Remove a saved base lunchbox from a child. Also deletes the image file from disk.\n\nIf the deleted lunchbox was the child's default, `default_lunchbox_id` is cleared automatically.\n\nHTTP 204 on success. HTTP 404 if child or lunchbox not found."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Base Lunchboxes",
+      "item": [
+        {
+          "name": "List Base Lunchboxes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/base-lunchboxes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "base-lunchboxes"]
+            },
+            "description": "Returns the 10 preset lunchbox container templates stored in the `base_lunchboxes` table.\n\nEach item includes:\n- `id` — 1–10\n- `name` — display name (e.g. 'Classic Bento Box')\n- `description` — short description\n- `container_type` — e.g. 'bento', 'tiffin', 'thermos'\n- `compartments` — number of compartments/sections\n- `image_url` — full URL to the container photo (served from /base_lunchboxes/)\n- `tags` — comma-separated tags\n- `sort_order` — display order\n\nImages are stored in the server's `base_lunchboxes/` directory (filenames 1.jpg…10.jpg or .webp).\n\nPass `base_lunchbox_id` to Create Session to hint the AI about the container type.\n\nRequires auth (JWT)."
           }
         }
       ]

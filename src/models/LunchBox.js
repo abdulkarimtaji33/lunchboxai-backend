@@ -209,8 +209,18 @@ function normalizeResult(row) {
   return row;
 }
 
+async function setSessionFlag(sessionId, userId, flag, value) {
+  const allowed = ['is_favorite', 'save_for_later'];
+  if (!allowed.includes(flag)) throw new Error('Invalid flag');
+  const [result] = await pool.execute(
+    `UPDATE lunchbox_sessions SET ${flag} = ? WHERE id = ? AND user_id = ?`,
+    [value ? 1 : 0, sessionId, userId]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   createSession, insertIngredientImages, insertSessionAllergenOverrides,
   updateStatus, attachResult, findByUser, findByIdAndUser,
-  getFilePaths, resolveAllergens, deleteById, setPlanDate,
+  getFilePaths, resolveAllergens, deleteById, setPlanDate, setSessionFlag,
 };

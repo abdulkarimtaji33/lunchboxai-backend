@@ -28,9 +28,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- Serve uploaded files ---
-app.use('/uploads',  express.static(path.join(__dirname, 'uploads')));
-app.use('/avatars',  express.static(path.join(__dirname, 'avatars')));
-app.use('/allergens', express.static(path.join(__dirname, 'allergens')));
+app.use('/uploads',         express.static(path.join(__dirname, 'uploads')));
+app.use('/avatars',         express.static(path.join(__dirname, 'avatars')));
+app.use('/allergens',       express.static(path.join(__dirname, 'allergens')));
+app.use('/base_lunchboxes', express.static(path.join(__dirname, 'base_lunchboxes')));
 
 // --- Passport (no sessions — JWT only) ---
 app.use(passport.initialize());
@@ -47,6 +48,7 @@ app.use('/api/children',         childRoutes);
 app.use('/api/avatars',          avatarRoutes);
 app.use('/api/school-rules',     schoolRuleRoutes);
 app.use('/api/lunchbox',         lunchboxRoutes);
+app.use('/api/base-lunchboxes', require('./src/routes/baseLunchboxRoutes'));
 
 // --- 404 for unknown routes ---
 app.use((req, res) => {
