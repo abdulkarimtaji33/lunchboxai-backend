@@ -5,7 +5,7 @@ const LunchBox     = require('../models/LunchBox');
 const Child        = require('../models/Child');
 const ChildLunchbox  = require('../models/ChildLunchbox');
 const BaseLunchbox   = require('../models/BaseLunchbox');
-const { analyzeLunchbox, identifyIngredients } = require('../services/aiService');
+const { analyzeLunchbox, identifyIngredients, buildSessionAiContext } = require('../services/aiService');
 const { generateFilledLunchbox, generateFilledLunchboxEdit, generateFilledLunchboxOpenRouter } = require('../services/imageGenService');
 const { deleteFiles, saveGeneratedLunchboxImage, buildPublicFileUrl } = require('../services/imageService');
 const { formatResponse, formatError, paginate } = require('../utils/helpers');
@@ -124,6 +124,8 @@ async function createSession(req, res, next) {
       prep_time_minutes, nutrition_goal_override, notes: effectiveNotes,
     };
 
+    const sessionContext = await buildSessionAiContext({ child, allergens, sessionOverrides });
+
     // Step 1: Analyse lunchbox shape + identify ingredients (in parallel)
     const ingredientPaths = ingredientFiles.map(f => f.path);
     const [
@@ -142,8 +144,8 @@ async function createSession(req, res, next) {
     const useEdit = use_image_edit === 'true' || use_image_edit === true;
     const { filledImageDataUrl, filledImageB64, foodItems, attemptSummaries, generatedAnalysis } =
       useEdit
-        ? await generateFilledLunchboxEdit({ lunchboxImagePath: lunchboxFile.path, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients })
-        : await generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients });
+        ? await generateFilledLunchboxEdit({ lunchboxImagePath: lunchboxFile.path, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext })
+        : await generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext });
 
     const processingMs = Date.now() - startTime;
 
@@ -287,6 +289,8 @@ async function createSessionOpenRouter(req, res, next) {
     const allergens = await LunchBox.resolveAllergens(child?.id || 0, sessionId);
     const sessionOverrides = { dislikes_override, school_rules_override, prep_time_minutes, nutrition_goal_override, notes: orEffectiveNotes };
 
+    const sessionContext = await buildSessionAiContext({ child, allergens, sessionOverrides });
+
     const ingredientPaths = ingredientFiles.map(f => f.path);
     const [
       { lunchboxDescription, compartmentCount, shape, orientation },
@@ -299,7 +303,7 @@ async function createSessionOpenRouter(req, res, next) {
     if (identifiedIngredients) console.log('Ingredients identified:', identifiedIngredients);
 
     const { filledImageDataUrl, filledImageB64, foodItems, attemptSummaries, generatedAnalysis } =
-      await generateFilledLunchboxOpenRouter({ lunchboxImagePath: lunchboxFile.path, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients });
+      await generateFilledLunchboxOpenRouter({ lunchboxImagePath: lunchboxFile.path, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext });
 
     const processingMs = Date.now() - startTime;
 

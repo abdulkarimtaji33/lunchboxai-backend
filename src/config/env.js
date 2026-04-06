@@ -29,4 +29,6 @@ module.exports = {
   },
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:5100',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  /** Required for POST /api/notifications/broadcast (header X-Broadcast-Secret) */
+  broadcastSecret: process.env.BROADCAST_SECRET || '',
 };

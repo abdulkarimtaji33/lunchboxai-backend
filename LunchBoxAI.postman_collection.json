@@ -15,7 +15,9 @@
     { "key": "allergen_id",        "value": "1",                     "type": "string",
       "description": "Master-data allergen ID. 1=Peanuts, 2=Tree Nuts, 3=Milk/Dairy, 4=Eggs, 5=Wheat/Gluten, 6=Soy, 7=Fish, 8=Shellfish, 9=Sesame, 10=Mustard, 11=Celery, 12=Lupin, 13=Sulphites, 14=Corn, 15=Latex-Fruit. Set manually before calling child-allergen endpoints." },
     { "key": "lunchbox_id",        "value": "1",                     "type": "string",
-      "description": "child_lunchboxes record ID. Set after uploading a child base lunchbox." }
+      "description": "child_lunchboxes record ID. Set after uploading a child base lunchbox." },
+    { "key": "broadcast_secret",   "value": "",                      "type": "string",
+      "description": "Must match server BROADCAST_SECRET. Required for POST /api/notifications/broadcast." }
   ],
   "item": [
 
@@ -873,6 +875,112 @@
               "path": ["api", "base-lunchboxes"]
             },
             "description": "Returns the 10 preset lunchbox container templates stored in the `base_lunchboxes` table.\n\nEach item includes:\n- `id` — 1–10\n- `name` — display name (e.g. 'Classic Bento Box')\n- `description` — short description\n- `container_type` — e.g. 'bento', 'tiffin', 'thermos'\n- `compartments` — number of compartments/sections\n- `image_url` — full URL to the container photo (served from /base_lunchboxes/)\n- `tags` — comma-separated tags\n- `sort_order` — display order\n\nImages are stored in the server's `base_lunchboxes/` directory (filenames 1.jpg…10.jpg or .webp).\n\nPass `base_lunchbox_id` to Create Session to hint the AI about the container type.\n\nRequires auth (JWT)."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Register FCM token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"REPLACE_WITH_FCM_WEB_TOKEN_FROM_BROWSER\",\n  \"notifications_enabled\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "token"]
+            },
+            "description": "Stores the device FCM token for the authenticated user (used for broadcast).\n\nOptional: `notifications_enabled` — `1` or `0`. Omitted on re-register keeps the existing flag.\n\nRequires JWT."
+          }
+        },
+        {
+          "name": "Set notifications enabled (keep token)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"REPLACE_WITH_SAME_TOKEN\",\n  \"notifications_enabled\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "token"]
+            },
+            "description": "Updates `notifications_enabled` for this token without deleting the row. Broadcast only sends to tokens with `notifications_enabled = 1`."
+          }
+        },
+        {
+          "name": "Unregister FCM token",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"REPLACE_WITH_SAME_TOKEN\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "token"]
+            },
+            "description": "Removes a device token for the current user."
+          }
+        },
+        {
+          "name": "Broadcast push (custom message)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Broadcast-Secret", "value": "{{broadcast_secret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Your lunch ideas are ready — open the app!\",\n  \"use_ai\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/broadcast",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "broadcast"]
+            },
+            "description": "Sends a web push to **all** registered FCM tokens.\n\n- `message` (string, required when `use_ai` is 0/false) — notification body.\n- `use_ai` — `0` or `false`: send `message` as-is (title: LunchBox AI).\n\n**Auth:** header `X-Broadcast-Secret` must equal server env `BROADCAST_SECRET` (not JWT).\n\nRequires server: `FIREBASE_SERVICE_ACCOUNT_JSON` and `OPENROUTER_API_KEY` only if using AI broadcast."
+          }
+        },
+        {
+          "name": "Broadcast push (AI marketing copy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Broadcast-Secret", "value": "{{broadcast_secret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Back-to-school week — promote healthy bento ideas\",\n  \"use_ai\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/broadcast",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "broadcast"]
+            },
+            "description": "Same as custom broadcast, but `use_ai` is `1` or `true`: uses OpenRouter (gpt-4o-mini) to generate `title` + `body` from `message` as a hint. If `message` is empty, a default marketing theme is used.\n\nRequires `OPENROUTER_API_KEY` on the server."
           }
         }
       ]

@@ -292,7 +292,7 @@ CREATE TABLE `lunchbox_sessions` (
   `dislikes_override` text DEFAULT NULL,
   `school_rules_override` text DEFAULT NULL,
   `prep_time_minutes` tinyint(3) UNSIGNED DEFAULT NULL,
-  `nutrition_goal_override` varchar(50) DEFAULT NULL,
+  `nutrition_goal_override` varchar(500) DEFAULT NULL,
   `planned_at` datetime DEFAULT NULL,
   `status` enum('pending','processing','completed','failed') NOT NULL DEFAULT 'pending',
   `error_message` text DEFAULT NULL,
@@ -688,6 +688,41 @@ ALTER TABLE `lunchbox_sessions`
 ALTER TABLE `session_allergen_overrides`
   ADD CONSTRAINT `fk_sao_allergen` FOREIGN KEY (`allergen_id`) REFERENCES `allergens` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_sao_session` FOREIGN KEY (`session_id`) REFERENCES `lunchbox_sessions` (`id`) ON DELETE CASCADE;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_fcm_tokens`
+--
+
+CREATE TABLE `user_fcm_tokens` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `token` varchar(512) NOT NULL,
+  `notifications_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Indexes for table `user_fcm_tokens`
+--
+ALTER TABLE `user_fcm_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_fcm_token` (`token`),
+  ADD KEY `idx_user_fcm_user` (`user_id`);
+
+--
+-- AUTO_INCREMENT for table `user_fcm_tokens`
+--
+ALTER TABLE `user_fcm_tokens`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- Constraints for table `user_fcm_tokens`
+--
+ALTER TABLE `user_fcm_tokens`
+  ADD CONSTRAINT `fk_fcm_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

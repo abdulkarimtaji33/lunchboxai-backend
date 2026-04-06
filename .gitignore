@@ -2,3 +2,6 @@ node_modules/
 .env
 uploads/
 *.log
+*-firebase-adminsdk*.json
+*firebase-adminsdk*.json
+google-services.json

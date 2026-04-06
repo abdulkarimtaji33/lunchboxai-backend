@@ -49,39 +49,73 @@ function parseLunchboxDescription(description) {
   return { compartmentCount, shape, orientation };
 }
 
-// --- Build child context string for the prompt ---
-async function buildChildContext({ child, allergens, sessionOverrides }) {
-  if (!child && !allergens?.length) return '';
+function ageFromDob(dateOfBirth) {
+  if (!dateOfBirth) return null;
+  const d = new Date(dateOfBirth);
+  if (Number.isNaN(d.getTime())) return null;
+  const years = (Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000);
+  return Math.max(0, Math.floor(years));
+}
 
-  const lines = ['Child profile:'];
+/** Parse comma-separated or JSON array of nutrition goal keys from session override */
+function parseNutritionGoalKeys(overrideVal) {
+  if (overrideVal == null || overrideVal === '') return [];
+  if (Array.isArray(overrideVal)) return overrideVal.map(String).map(s => s.trim()).filter(Boolean);
+  const s = String(overrideVal).trim();
+  if (s.startsWith('[')) {
+    try {
+      const arr = JSON.parse(s);
+      return Array.isArray(arr) ? arr.map(String).map(x => x.trim()).filter(Boolean) : [];
+    } catch { /* fall through */ }
+  }
+  return s.split(',').map(x => x.trim()).filter(Boolean);
+}
 
-  if (child?.name) lines.push(`- Name: ${child.name}`);
-  if (child?.age)  lines.push(`- Age: ${child.age} years old`);
+async function nutritionGoalsTextFromKeys(keys) {
+  if (!keys.length) return null;
+  const parts = [];
+  for (const key of keys) {
+    const g = await NutritionGoal.findByKey(key);
+    if (g) parts.push(`${g.label} (${g.description || g.goal_key})`);
+    else parts.push(key);
+  }
+  return parts.join('; ');
+}
 
-  const dislikes = sessionOverrides?.dislikes_override ?? child?.dislikes;
-  if (dislikes)    lines.push(`- Foods to avoid (dislikes): ${dislikes}`);
+/**
+ * Session + child context for vision and image prompts. Always includes session notes,
+ * nutrition goals, prep, dislikes, and school rules when provided — even without a child.
+ */
+async function buildSessionAiContext({ child, allergens = [], sessionOverrides = {} }) {
+  const lines = [];
 
-  const schoolRules = sessionOverrides?.school_rules_override ?? child?.school_rules;
-  if (schoolRules)  lines.push(`- School rules: ${schoolRules}`);
+  if (child?.name) lines.push(`- Child name: ${child.name}`);
+  const age = child?.age ?? ageFromDob(child?.date_of_birth);
+  if (age != null) lines.push(`- Age: ${age} years old`);
 
-  const prepTime = sessionOverrides?.prep_time_minutes ?? child?.prep_time_minutes;
-  if (prepTime)     lines.push(`- Max prep time: ${prepTime} minutes`);
+  const dislikes = sessionOverrides.dislikes_override;
+  if (dislikes) lines.push(`- Foods to avoid (dislikes): ${dislikes}`);
 
-  if (allergens?.length) {
-    const allergenList = allergens.map(a => `${a.name} (${a.severity})`).join(', ');
-    lines.push(`- Strictly avoid: ${allergenList}`);
+  const schoolRules = sessionOverrides.school_rules_override;
+  if (schoolRules) lines.push(`- School rules: ${schoolRules}`);
+
+  const prepTime = sessionOverrides.prep_time_minutes;
+  if (prepTime) lines.push(`- Max prep time: ${prepTime} minutes`);
+
+  if (allergens.length) {
+    lines.push(`- Strictly avoid (allergens): ${allergens.map(a => `${a.name} (${a.severity})`).join(', ')}`);
   }
 
-  // Fetch nutrition goal description from DB
-  const goalKey = sessionOverrides?.nutrition_goal_override ?? child?.nutrition_goal ?? 'balanced';
-  const goalRecord = await NutritionGoal.findByKey(goalKey);
-  const goalDesc = goalRecord?.description || goalKey;
-  lines.push(`- Nutritional goal: ${goalDesc}`);
+  const goalKeys = parseNutritionGoalKeys(sessionOverrides.nutrition_goal_override);
+  const nutText = await nutritionGoalsTextFromKeys(goalKeys);
+  if (nutText) lines.push(`- Nutritional goals: ${nutText}`);
 
   if (child?.calorie_target) lines.push(`- Target calories: ~${child.calorie_target} kcal`);
   if (child?.protein_target) lines.push(`- Target protein: ~${child.protein_target}g`);
 
-  if (sessionOverrides?.notes) lines.push(`- Parent notes: ${sessionOverrides.notes}`);
+  if (sessionOverrides.notes) lines.push(`- Parent notes for this meal: ${sessionOverrides.notes}`);
+
+  if (!lines.length) return '';
 
   return lines.join('\n');
 }
@@ -128,10 +162,10 @@ async function identifyIngredients(ingredientImagePaths) {
 async function analyzeLunchbox({ lunchboxImagePath, child, allergens = [], sessionOverrides = {} }) {
   const lunchboxBlock = await buildImageBlock(lunchboxImagePath);
 
-  const childContext = await buildChildContext({ child, allergens, sessionOverrides });
+  const sessionContext = await buildSessionAiContext({ child, allergens, sessionOverrides });
 
-  const textContent = childContext
-    ? `${childContext}\n\n${VISION_PROMPT}`
+  const textContent = sessionContext
+    ? `Use the following when reasoning about what foods belong in this lunchbox (allergies and notes are mandatory):\n${sessionContext}\n\n${VISION_PROMPT}`
     : VISION_PROMPT;
 
   const content = [
@@ -156,4 +190,4 @@ async function analyzeLunchbox({ lunchboxImagePath, child, allergens = [], sessi
   return { lunchboxDescription, compartmentCount, shape, orientation };
 }
 
-module.exports = { analyzeLunchbox, identifyIngredients };
+module.exports = { analyzeLunchbox, identifyIngredients, buildSessionAiContext };

@@ -18,6 +18,7 @@ const childRoutes        = require('./src/routes/childRoutes');
 const avatarRoutes       = require('./src/routes/avatarRoutes');
 const schoolRuleRoutes   = require('./src/routes/schoolRuleRoutes');
 const lunchboxRoutes     = require('./src/routes/lunchboxRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
 const errorHandler       = require('./src/middleware/errorHandler');
 
 const app = express();
@@ -49,6 +50,7 @@ app.use('/api/avatars',          avatarRoutes);
 app.use('/api/school-rules',     schoolRuleRoutes);
 app.use('/api/lunchbox',         lunchboxRoutes);
 app.use('/api/base-lunchboxes', require('./src/routes/baseLunchboxRoutes'));
+app.use('/api/notifications',    notificationRoutes);
 
 // --- 404 for unknown routes ---
 app.use((req, res) => {

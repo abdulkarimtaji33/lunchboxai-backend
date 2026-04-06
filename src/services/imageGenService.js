@@ -43,10 +43,16 @@ const VERIFICATION_PROMPT =
   '{"compartment_count":number,"shape":"rectangular|square|round|other","orientation":"landscape|portrait|square","food_items":["food1","food2"]}. ' +
   'List every food item you can see placed in the lunchbox in food_items.';
 
-async function generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients }) {
+function sessionPreferencesBlock(sessionContext) {
+  const t = sessionContext && String(sessionContext).trim();
+  if (!t) return '';
+  return `\nSESSION PREFERENCES (must follow when choosing and depicting foods):\n${t}\n`;
+}
+
+async function generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
   const ingredientLine = identifiedIngredients
     ? `- AVAILABLE INGREDIENTS — you MUST use only these: ${identifiedIngredients}\n`
-    : '- Choose healthy, colourful, appealing foods that children enjoy (e.g. fruit slices, veggie sticks, sandwiches, cheese, crackers, yogurt, boiled eggs)\n';
+    : '- You decide what goes in each compartment — pick your own varied, balanced, age-appropriate foods; do not follow any fixed or example menu.\n';
 
   const dallePrompt = `Professional food photography: top-down view of a lunchbox matching this description: ${lunchboxDescription}
 
@@ -57,7 +63,7 @@ STRICT REQUIREMENTS:
 ${ingredientLine}- Use exactly ${compartmentCount} foods total (one per compartment)
 - NO extra containers, NO duplicate lunchboxes, NO additional trays
 - Keep the same compartment arrangement as described
-
+${sessionPreferencesBlock(sessionContext)}
 Style: Clean white background, bright natural lighting, sharp focus, appetizing presentation, realistic food photography.`;
 
   console.log('Step 2: Generating filled lunchbox with gpt-image-1.5...');
@@ -150,10 +156,10 @@ Style: Clean white background, bright natural lighting, sharp focus, appetizing 
 }
 
 // --- Image EDIT flow: uses the actual lunchbox photo as base image ---
-async function generateFilledLunchboxEdit({ lunchboxImagePath, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients }) {
+async function generateFilledLunchboxEdit({ lunchboxImagePath, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
   const ingredientLine = identifiedIngredients
     ? `- AVAILABLE INGREDIENTS: ${identifiedIngredients}`
-    : '- Choose healthy, colourful, appealing foods that children enjoy';
+    : '- You decide what foods to add — varied, balanced, kid-friendly; do not use a fixed or example list.';
 
   const editPrompt =
     `This is a photo of an empty lunchbox. Fill it with food items.
@@ -166,7 +172,7 @@ ${ingredientLine}
 - Use exactly ${compartmentCount} foods total (one per compartment)
 - Each food should look fresh, appetizing, and realistic
 - Do NOT add extra containers, trays, or duplicate lunchboxes
-
+${sessionPreferencesBlock(sessionContext)}
 Style: Bright natural lighting, sharp focus, professional food photography.`;
 
   console.log('Step 2 (edit): Editing lunchbox image with gpt-image-1...');
@@ -232,10 +238,10 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
 }
 
 // --- OpenRouter flow: uses gpt-5-image-mini via chat completions ---
-async function generateFilledLunchboxOpenRouter({ lunchboxImagePath, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients }) {
+async function generateFilledLunchboxOpenRouter({ lunchboxImagePath, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
   const ingredientLine = identifiedIngredients
     ? `- AVAILABLE INGREDIENTS: ${identifiedIngredients}`
-    : '- Choose healthy, colourful, appealing foods that children enjoy';
+    : '- You decide what foods to add — varied, balanced, kid-friendly; do not use a fixed or example list.';
 
   const prompt =
     `This is a photo of an empty lunchbox. Fill it with food items.
@@ -248,7 +254,7 @@ ${ingredientLine}
 - Use exactly ${compartmentCount} foods total (one per compartment)
 - Each food should look fresh, appetizing, and realistic
 - Do NOT add extra containers, trays, or duplicate lunchboxes
-
+${sessionPreferencesBlock(sessionContext)}
 CRITICAL COMPOSITION RULES:
 - The lunchbox must be fully visible within the frame
 - Do NOT zoom in or crop any part of the lunchbox, its better to zoom out so the lunchbox is fully visible.
