@@ -8,6 +8,7 @@ const PasswordResetToken = require('../models/PasswordResetToken');
 const { sendPasswordResetEmail } = require('../services/emailService');
 const env    = require('../config/env');
 const { formatResponse, formatError } = require('../utils/helpers');
+const { verifyGoogleIdToken } = require('../services/googleAuthService');
 
 function signToken(userId) {
   return jwt.sign({ id: userId }, env.jwt.secret, { expiresIn: env.jwt.expiresIn });
@@ -81,6 +82,61 @@ async function updateProfile(req, res, next) {
   }
 }
 
+/** Native / mobile: verify Google Sign-In ID token, return same JWT shape as login */
+async function googleMobileLogin(req, res, next) {
+  try {
+    const audiences = env.google.allowedAudiences;
+    if (!audiences.length) {
+      return res.status(503).json(
+        formatError('Google mobile auth not configured (set GOOGLE_CLIENT_ID or GOOGLE_ALLOWED_AUDIENCES)', 'NOT_CONFIGURED')
+      );
+    }
+
+    const idToken = req.body.idToken || req.body.id_token;
+    let payload;
+    try {
+      payload = await verifyGoogleIdToken(idToken, audiences);
+    } catch {
+      return res.status(401).json(formatError('Invalid or expired Google ID token', 'INVALID_GOOGLE_TOKEN'));
+    }
+
+    const sub = payload.sub;
+    if (!sub) {
+      return res.status(401).json(formatError('Invalid Google ID token', 'INVALID_GOOGLE_TOKEN'));
+    }
+
+    const email = (payload.email || '').trim() || null;
+    const name = (payload.name || '').trim() || (email ? email.split('@')[0] : 'User');
+    const picture = payload.picture || null;
+
+    let user = await User.findByProvider('google', sub);
+    if (!user) {
+      if (!email) {
+        return res.status(400).json(formatError('Google account must share an email to register', 'EMAIL_REQUIRED'));
+      }
+      const existing = await User.findByEmailInsensitive(email);
+      if (existing) {
+        return res.status(409).json(
+          formatError('This email is already registered with another sign-in method.', 'EMAIL_CONFLICT')
+        );
+      }
+      user = await User.createSocial({
+        provider: 'google',
+        provider_id: sub,
+        name,
+        email,
+        avatar_url: picture,
+      });
+    }
+
+    const publicUser = await User.findById(user.id);
+    const token = signToken(user.id);
+    res.json(formatResponse({ token, user: publicUser }));
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Called after passport authenticates via Google or Facebook
 function handleOAuthCallback(req, res) {
   const token = signToken(req.user.id);
@@ -147,4 +203,13 @@ async function resetPassword(req, res, next) {
   }
 }
 
-module.exports = { register, login, getProfile, updateProfile, handleOAuthCallback, forgotPassword, resetPassword };
+module.exports = {
+  register,
+  login,
+  getProfile,
+  updateProfile,
+  googleMobileLogin,
+  handleOAuthCallback,
+  forgotPassword,
+  resetPassword,
+};

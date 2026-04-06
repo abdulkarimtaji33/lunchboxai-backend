@@ -2,11 +2,12 @@
   "info": {
     "name": "LunchBox AI",
     "_postman_id": "lunchboxai-collection-v1",
-    "description": "Complete API collection for LunchBox AI backend.\n\nBase URL: http://localhost:5100\n\nCollection variables:\n- `base_url` — server origin (default: http://localhost:5100)\n- `token`    — JWT; auto-populated by Register / Login test scripts\n- `child_id` — auto-populated by Add Child test script\n- `session_id` — auto-populated by Create Session test script\n- `food_item_id` — auto-populated by Create Food Item test script\n- `nutrition_goal_id` — auto-populated by Create Nutrition Goal test script\n- `allergen_id` — master-data allergen ID (1=Peanuts, 2=Tree Nuts, 3=Milk/Dairy, 4=Eggs, 5=Wheat/Gluten, 6=Soy, 7=Fish, 8=Shellfish, 9=Sesame, 10=Mustard, …15); set manually before using child-allergen endpoints\n\nRun order for a full E2E flow:\n1. Register (or Login)\n2. List Allergens → pick allergen IDs\n3. List School Rules → pick rule IDs\n4. List Avatars → pick avatar ID\n5. Add Child\n6. Create Session (generate lunchbox)\n7. Get Session History",
+    "description": "Complete API collection for LunchBox AI backend.\n\nBase URL: match your server (see `PORT` and `APP_BASE_URL` in backend `.env`; default collection value is http://localhost:3000).\n\nCollection variables:\n- `base_url` — server origin (default: http://localhost:3000)\n- `token`    — JWT; auto-populated by Register / Login test scripts\n- `child_id` — auto-populated by Add Child test script\n- `session_id` — auto-populated by Create Session test script\n- `food_item_id` — auto-populated by Create Food Item test script\n- `nutrition_goal_id` — auto-populated by Create Nutrition Goal test script\n- `allergen_id` — master-data allergen ID (1=Peanuts, 2=Tree Nuts, 3=Milk/Dairy, 4=Eggs, 5=Wheat/Gluten, 6=Soy, 7=Fish, 8=Shellfish, 9=Sesame, 10=Mustard, …15); set manually before using child-allergen endpoints\n\nRun order for a full E2E flow:\n1. Register (or Login)\n2. List Allergens → pick allergen IDs\n3. List School Rules → pick rule IDs\n4. List Avatars → pick avatar ID\n5. Add Child\n6. Create Session (generate lunchbox)\n7. Get Session History",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url",           "value": "http://localhost:5100", "type": "string" },
+    { "key": "base_url",           "value": "http://localhost:3000", "type": "string",
+      "description": "Must match APP_BASE_URL (same host/port as the API). If the server runs on 5100, set to http://localhost:5100." },
     { "key": "token",              "value": "",                      "type": "string" },
     { "key": "child_id",           "value": "1",                     "type": "string" },
     { "key": "session_id",         "value": "1",                     "type": "string" },
@@ -126,6 +127,30 @@
           }
         },
         {
+          "name": "Google Sign-In (mobile — ID token)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.token) {",
+            "  pm.collectionVariables.set('token', json.data.token);",
+            "  console.log('Token saved');",
+            "}"
+          ], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"PASTE_ID_TOKEN_FROM_GOOGLE_SIGN_IN_SDK\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/google/mobile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google", "mobile"]
+            },
+            "description": "For **native apps** (Android / iOS / Flutter / React Native): after Google Sign-In returns an ID token, POST it here. Body: `{ \"idToken\": \"...\" }` or `{ \"id_token\": \"...\" }`.\n\nServer verifies the token with Google; `aud` must match one of the IDs in `GOOGLE_ALLOWED_AUDIENCES` (defaults to `GOOGLE_CLIENT_ID`). Add your Android and iOS OAuth client IDs to that env var as a comma-separated list.\n\nReturns `{ data: { token, user } }` like Login. HTTP 401 if token invalid, 409 if email already used with another provider."
+          }
+        },
+        {
           "name": "Get My Profile",
           "request": {
             "method": "GET",
@@ -168,7 +193,20 @@
               "host": ["{{base_url}}"],
               "path": ["api", "auth", "google"]
             },
-            "description": "Initiates Google OAuth2 flow. Must be opened in a browser — not testable directly in Postman.\n\nOn success, redirects to `{FRONTEND_URL}/auth/callback?token=<jwt>`."
+            "description": "Starts the Google OAuth2 authorization-code flow (redirects to Google). Open this URL in a browser — Postman cannot complete the flow.\n\nRequires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in server `.env`. The redirect URI sent to Google is `{APP_BASE_URL}/api/auth/google/callback` unless you set `GOOGLE_CALLBACK_URL`.\n\nIn Google Cloud Console → OAuth client → Authorized redirect URIs, add exactly that callback URL (e.g. `http://localhost:3000/api/auth/google/callback` when `APP_BASE_URL=http://localhost:3000`). Do not use `/api/auth/google` as the redirect URI.\n\nAfter Google returns to the callback, the server issues a JWT and redirects to `{FRONTEND_URL}/auth/callback?token=<jwt>`."
+          }
+        },
+        {
+          "name": "Google OAuth callback (Google redirect only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/google/callback",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google", "callback"]
+            },
+            "description": "This route is hit by Google’s redirect after the user signs in (includes `?code=` and `?state=`). You do not open it manually in Postman for a real login. It is listed here so the exact path is visible for Google Cloud Console “Authorized redirect URIs” and must match `GOOGLE_CALLBACK_URL` or `{APP_BASE_URL}/api/auth/google/callback`."
           }
         },
         {
@@ -181,7 +219,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "auth", "facebook"]
             },
-            "description": "Initiates Facebook OAuth flow. Must be opened in a browser — not testable directly in Postman.\n\nOn success, redirects to `{FRONTEND_URL}/auth/callback?token=<jwt>`."
+            "description": "Starts the Facebook OAuth flow. Open in a browser — Postman cannot complete the flow.\n\nCallback URL on the server is `{APP_BASE_URL}/api/auth/facebook/callback`; add the same URL in the Facebook app’s Valid OAuth Redirect URIs.\n\nOn success, redirects to `{FRONTEND_URL}/auth/callback?token=<jwt>`."
           }
         }
       ]

@@ -2,15 +2,32 @@
 
 const router   = require('express').Router();
 const passport = require('../config/passport');
-const { register, login, getProfile, updateProfile, handleOAuthCallback, forgotPassword, resetPassword } = require('../controllers/authController');
+const {
+  register,
+  login,
+  getProfile,
+  updateProfile,
+  googleMobileLogin,
+  handleOAuthCallback,
+  forgotPassword,
+  resetPassword,
+} = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
-const { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('../utils/validators');
+const {
+  validate,
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  googleIdTokenSchema,
+} = require('../utils/validators');
 
 // Local auth
 router.post('/register', validate(registerSchema), register);
 router.post('/login',    validate(loginSchema),    login);
 router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
+router.post('/google/mobile', validate(googleIdTokenSchema), googleMobileLogin);
 
 // Profile (protected)
 router.get('/me',   authenticate, getProfile);

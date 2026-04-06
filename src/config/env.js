@@ -22,13 +22,22 @@ module.exports = {
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    /** Must match “Authorized redirect URIs” in Google Cloud Console (OAuth client). */
+    callbackUrl:
+      process.env.GOOGLE_CALLBACK_URL ||
+      `${process.env.APP_BASE_URL || 'http://localhost:5100'}/api/auth/google/callback`,
+    /** Comma-separated OAuth client IDs allowed as `aud` in ID tokens (web + Android + iOS). Defaults to GOOGLE_CLIENT_ID. */
+    allowedAudiences: (process.env.GOOGLE_ALLOWED_AUDIENCES || process.env.GOOGLE_CLIENT_ID || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   },
   facebook: {
     appId: process.env.FACEBOOK_APP_ID,
     appSecret: process.env.FACEBOOK_APP_SECRET,
   },
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:5100',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   /** Required for POST /api/notifications/broadcast (header X-Broadcast-Secret) */
   broadcastSecret: process.env.BROADCAST_SECRET || '',
   smtp: {

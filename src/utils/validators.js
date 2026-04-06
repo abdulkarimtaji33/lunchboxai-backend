@@ -21,6 +21,11 @@ const resetPasswordSchema = Joi.object({
   newPassword: Joi.string().min(6).max(128).required(),
 });
 
+const googleIdTokenSchema = Joi.object({
+  idToken: Joi.string().min(20).optional(),
+  id_token: Joi.string().min(20).optional(),
+}).or('idToken', 'id_token');
+
 const childSchema = Joi.object({
   name:            Joi.string().min(1).max(100).required(),
   date_of_birth:   Joi.date().iso().max('now').optional(),
@@ -85,6 +90,7 @@ module.exports = {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  googleIdTokenSchema,
   childSchema,
   childUpdateSchema,
   childAllergenSchema,

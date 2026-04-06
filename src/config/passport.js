@@ -8,7 +8,7 @@ if (env.google.clientId && env.google.clientSecret) {
   passport.use(new GoogleStrategy({
     clientID: env.google.clientId,
     clientSecret: env.google.clientSecret,
-    callbackURL: `${env.appBaseUrl}/api/auth/google/callback`,
+    callbackURL: env.google.callbackUrl,
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       let user = await User.findByProvider('google', profile.id);
