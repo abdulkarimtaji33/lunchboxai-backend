@@ -66,7 +66,7 @@ async function runFile(conn, filepath, filename) {
     .filter(s => s.length > 0);
 
   for (const stmt of statements) {
-    await conn.execute(stmt);
+    await conn.query(stmt);
   }
 
   await conn.execute(
