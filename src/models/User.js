@@ -12,6 +12,11 @@ const User = {
     return rows[0] || null;
   },
 
+  async findByEmailInsensitive(email) {
+    const [rows] = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER(?)', [email]);
+    return rows[0] || null;
+  },
+
   async findByProvider(provider, providerId) {
     const [rows] = await pool.query('SELECT * FROM users WHERE provider = ? AND provider_id = ?', [provider, providerId]);
     return rows[0] || null;
@@ -44,6 +49,10 @@ const User = {
 
   async updateProfile(id, { name }) {
     await pool.query('UPDATE users SET name = ? WHERE id = ?', [name, id]);
+  },
+
+  async updatePasswordHash(id, passwordHash) {
+    await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, id]);
   },
 
   async comparePassword(plainPassword, hash) {

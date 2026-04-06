@@ -2,13 +2,15 @@
 
 const router   = require('express').Router();
 const passport = require('../config/passport');
-const { register, login, getProfile, updateProfile, handleOAuthCallback } = require('../controllers/authController');
+const { register, login, getProfile, updateProfile, handleOAuthCallback, forgotPassword, resetPassword } = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
-const { validate, registerSchema, loginSchema } = require('../utils/validators');
+const { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('../utils/validators');
 
 // Local auth
 router.post('/register', validate(registerSchema), register);
 router.post('/login',    validate(loginSchema),    login);
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
+router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 
 // Profile (protected)
 router.get('/me',   authenticate, getProfile);

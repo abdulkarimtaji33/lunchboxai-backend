@@ -49,6 +49,15 @@ function sessionPreferencesBlock(sessionContext) {
   return `\nSESSION PREFERENCES (must follow when choosing and depicting foods):\n${t}\n`;
 }
 
+/** Keeps food off lids/covers when the reference image shows a closed container. */
+const COVER_AND_LID_RULES = `
+COVER / LID (must follow):
+- If the image shows a lid, hinged cover, top flap, or separate cover piece: do NOT put any food on it. The lid/cover is NOT a food surface.
+- Depict the lunchbox OPEN: omit the lid or move it fully aside so every compartment interior is visible.
+- Place food ONLY inside the compartment wells (the indented/divided areas). Never on the outer rim, never on the lid, never on a closed top.
+- Do not draw food overlapping or sitting on the cover even if the cover appears in frame.
+`;
+
 async function generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
   const ingredientLine = identifiedIngredients
     ? `- AVAILABLE INGREDIENTS — you MUST use only these: ${identifiedIngredients}\n`
@@ -63,6 +72,7 @@ STRICT REQUIREMENTS:
 ${ingredientLine}- Use exactly ${compartmentCount} foods total (one per compartment)
 - NO extra containers, NO duplicate lunchboxes, NO additional trays
 - Keep the same compartment arrangement as described
+${COVER_AND_LID_RULES}
 ${sessionPreferencesBlock(sessionContext)}
 Style: Clean white background, bright natural lighting, sharp focus, appetizing presentation, realistic food photography.`;
 
@@ -172,6 +182,7 @@ ${ingredientLine}
 - Use exactly ${compartmentCount} foods total (one per compartment)
 - Each food should look fresh, appetizing, and realistic
 - Do NOT add extra containers, trays, or duplicate lunchboxes
+${COVER_AND_LID_RULES}
 ${sessionPreferencesBlock(sessionContext)}
 Style: Bright natural lighting, sharp focus, professional food photography.`;
 
@@ -261,6 +272,7 @@ CRITICAL COMPOSITION RULES:
 - Maintain identical framing, margins, and camera distance as the original image
 - Preserve exact positioning and spacing of all compartments
 - The output must look like the SAME photo, only with food added
+${COVER_AND_LID_RULES}
 
 Style: Bright natural lighting, sharp focus, professional food photography.`;
 

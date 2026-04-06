@@ -21,6 +21,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "mysql2": "^3.19.1",
+    "nodemailer": "^8.0.4",
     "openai": "^6.27.0",
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",

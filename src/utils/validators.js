@@ -12,6 +12,15 @@ const loginSchema = Joi.object({
   password: Joi.string().required(),
 });
 
+const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+const resetPasswordSchema = Joi.object({
+  token: Joi.string().min(20).required(),
+  newPassword: Joi.string().min(6).max(128).required(),
+});
+
 const childSchema = Joi.object({
   name:            Joi.string().min(1).max(100).required(),
   date_of_birth:   Joi.date().iso().max('now').optional(),
@@ -71,4 +80,15 @@ function validate(schema) {
   };
 }
 
-module.exports = { registerSchema, loginSchema, childSchema, childUpdateSchema, childAllergenSchema, foodItemSchema, nutritionGoalSchema, validate };
+module.exports = {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  childSchema,
+  childUpdateSchema,
+  childAllergenSchema,
+  foodItemSchema,
+  nutritionGoalSchema,
+  validate,
+};

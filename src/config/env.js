@@ -31,4 +31,12 @@ module.exports = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
   /** Required for POST /api/notifications/broadcast (header X-Broadcast-Secret) */
   broadcastSecret: process.env.BROADCAST_SECRET || '',
+  smtp: {
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT, 10) || 587,
+    secure: process.env.SMTP_SECURE === '1' || process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.EMAIL_FROM || '',
+  },
 };
