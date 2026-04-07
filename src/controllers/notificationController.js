@@ -74,7 +74,12 @@ async function broadcast(req, res, next) {
   try {
     const messaging = getMessaging();
     if (!messaging) {
-      return res.status(503).json(formatError('Firebase not configured (FIREBASE_SERVICE_ACCOUNT_JSON)', 'NOT_CONFIGURED'));
+      return res.status(503).json(
+        formatError(
+          'Firebase Admin not configured. Set FIREBASE_SERVICE_ACCOUNT_JSON, FIREBASE_SERVICE_ACCOUNT_JSON_B64, FIREBASE_SERVICE_ACCOUNT_PATH, or GOOGLE_APPLICATION_CREDENTIALS on the server.',
+          'NOT_CONFIGURED'
+        )
+      );
     }
 
     const { message, use_ai } = req.body;

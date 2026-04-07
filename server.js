@@ -20,6 +20,7 @@ const schoolRuleRoutes   = require('./src/routes/schoolRuleRoutes');
 const lunchboxRoutes     = require('./src/routes/lunchboxRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
 const errorHandler       = require('./src/middleware/errorHandler');
+const { httpLogger, logRequestBody } = require('./src/middleware/httpLogger');
 
 const app = express();
 
@@ -27,6 +28,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(httpLogger);
+app.use(logRequestBody);
 
 // --- Serve uploaded files ---
 app.use('/uploads',         express.static(path.join(__dirname, 'uploads')));
@@ -63,8 +66,8 @@ app.use(errorHandler);
 // --- Start ---
 async function start() {
   await testConnection();
-  app.listen(env.port, () => {
-    console.log(`LunchBox AI server running on http://localhost:${env.port}`);
+  app.listen(env.port, '0.0.0.0', () => {
+    console.log(`LunchBox AI server listening on http://0.0.0.0:${env.port}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }
