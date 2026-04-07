@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 30, 2026 at 07:02 AM
+-- Generation Time: Apr 07, 2026 at 07:19 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -90,6 +90,37 @@ INSERT INTO `avatars` (`id`, `name`, `filename`, `is_active`, `created_at`) VALU
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `base_lunchboxes`
+--
+
+CREATE TABLE `base_lunchboxes` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `container_type` varchar(50) DEFAULT NULL,
+  `compartments` int(11) DEFAULT 1,
+  `image_path` varchar(500) DEFAULT NULL,
+  `tags` varchar(255) DEFAULT NULL,
+  `sort_order` int(11) DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `base_lunchboxes`
+--
+
+INSERT INTO `base_lunchboxes` (`id`, `name`, `description`, `container_type`, `compartments`, `image_path`, `tags`, `sort_order`, `is_active`, `created_at`) VALUES
+(1, 'Classic Bento Box', 'Traditional Japanese-style bento with 4 equal compartments', 'bento', 4, 'base_lunchboxes/1.jpg', 'classic,japanese,rectangular', 1, 1, '2026-03-31 08:51:46'),
+(2, 'Round Tiffin Box', '3-tier stacked round tiffin carrier', 'tiffin', 3, 'base_lunchboxes/2.jpg', 'round,stacked,traditional', 2, 1, '2026-03-31 08:51:46'),
+(3, 'Simple Sandwich Box', 'Single-compartment rectangular box ideal for sandwiches', 'sandwich', 1, 'base_lunchboxes/3.jpg', 'simple,rectangular,sandwich', 3, 1, '2026-03-31 08:51:46'),
+(4, 'Snack Bento (5 sections)', 'Five-section bento perfect for variety snacks', 'bento', 5, 'base_lunchboxes/4.jpg', 'snack,variety,5-section', 4, 1, '2026-03-31 08:51:46'),
+(5, 'Thermos + Side Container', 'Insulated thermos with a small side compartment', 'thermos', 2, 'base_lunchboxes/5.webp', 'hot,thermos,soup,warm', 5, 1, '2026-03-31 08:51:46'),
+(6, 'Divided Plate Box', 'Plate-style 3-section divided lunchbox', 'plate', 3, 'base_lunchboxes/6.jpg', 'plate,divided,3-section', 6, 1, '2026-03-31 08:51:46');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `children`
 --
 
@@ -99,32 +130,9 @@ CREATE TABLE `children` (
   `name` varchar(100) NOT NULL,
   `date_of_birth` date DEFAULT NULL,
   `avatar_id` int(11) DEFAULT NULL,
-  `default_lunchbox_id` int(10) UNSIGNED DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `children`
---
-
-INSERT INTO `children` (`id`, `user_id`, `name`, `date_of_birth`, `avatar_id`, `created_at`, `updated_at`) VALUES
-(1, 1, 'test child', '2011-06-18', NULL, '2026-03-18 06:29:09', '2026-03-18 06:29:09'),
-(2, 1, 'test child 2', '2021-03-11', 1, '2026-03-18 06:44:53', '2026-03-18 06:44:53'),
-(3, 1, 'test child 3', '2021-06-16', 1, '2026-03-18 10:38:39', '2026-03-18 10:38:39');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `child_lunchboxes`
---
-
-CREATE TABLE `child_lunchboxes` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `child_id` int(10) UNSIGNED NOT NULL,
-  `label` varchar(100) DEFAULT NULL,
-  `image_path` varchar(500) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `default_lunchbox_id` int(10) UNSIGNED DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -140,17 +148,19 @@ CREATE TABLE `child_allergens` (
   `notes` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+
 --
--- Dumping data for table `child_allergens`
+-- Table structure for table `child_lunchboxes`
 --
 
-INSERT INTO `child_allergens` (`child_id`, `allergen_id`, `severity`, `notes`) VALUES
-(1, 13, 'allergy', NULL),
-(2, 1, 'allergy', NULL),
-(2, 5, 'allergy', NULL),
-(2, 8, 'allergy', NULL),
-(3, 1, 'allergy', NULL),
-(3, 13, 'allergy', NULL);
+CREATE TABLE `child_lunchboxes` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `child_id` int(10) UNSIGNED NOT NULL,
+  `label` varchar(100) DEFAULT NULL,
+  `image_path` varchar(500) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -173,19 +183,6 @@ CREATE TABLE `child_school_rules` (
   `child_id` int(10) UNSIGNED NOT NULL,
   `school_rule_id` smallint(5) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `child_school_rules`
---
-
-INSERT INTO `child_school_rules` (`child_id`, `school_rule_id`) VALUES
-(1, 3),
-(1, 5),
-(1, 6),
-(2, 3),
-(2, 6),
-(3, 3),
-(3, 6);
 
 -- --------------------------------------------------------
 
@@ -245,16 +242,6 @@ CREATE TABLE `ingredient_images` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `ingredient_images`
---
-
-INSERT INTO `ingredient_images` (`id`, `session_id`, `image_path`, `label`, `created_at`) VALUES
-(1, 19, 'uploads\\1774351261930-360885221.jpg', NULL, '2026-03-24 11:21:01'),
-(2, 19, 'uploads\\1774351261930-924694368.webp', NULL, '2026-03-24 11:21:01'),
-(3, 40, 'uploads\\1774505020493-773750187.jpg', NULL, '2026-03-26 06:03:40'),
-(4, 41, 'uploads\\1774505041726-405038079.jpg', NULL, '2026-03-26 06:04:01');
-
 -- --------------------------------------------------------
 
 --
@@ -293,62 +280,14 @@ CREATE TABLE `lunchbox_sessions` (
   `school_rules_override` text DEFAULT NULL,
   `prep_time_minutes` tinyint(3) UNSIGNED DEFAULT NULL,
   `nutrition_goal_override` varchar(500) DEFAULT NULL,
-  `planned_at` datetime DEFAULT NULL,
   `status` enum('pending','processing','completed','failed') NOT NULL DEFAULT 'pending',
   `error_message` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `planned_at` datetime DEFAULT NULL,
+  `is_favorite` tinyint(1) NOT NULL DEFAULT 0,
+  `save_for_later` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `lunchbox_sessions`
---
-
-INSERT INTO `lunchbox_sessions` (`id`, `user_id`, `child_id`, `lunchbox_image_path`, `notes`, `dislikes_override`, `school_rules_override`, `prep_time_minutes`, `nutrition_goal_override`, `status`, `error_message`, `created_at`, `updated_at`) VALUES
-(1, 1, 2, 'uploads\\1773816417555-896799807.png', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-18 06:46:57', '2026-03-18 06:46:58'),
-(2, 1, 2, 'uploads\\1773816421111-549525425.png', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-18 06:47:01', '2026-03-18 06:47:01'),
-(3, 1, 2, 'uploads\\1773816422848-802690873.png', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-18 06:47:02', '2026-03-18 06:47:03'),
-(4, 1, 2, 'uploads\\1773816919941-176844445.png', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-18 06:55:19', '2026-03-18 06:55:20'),
-(5, 1, 2, 'uploads\\1773817087962-245115333.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-18 06:58:07', '2026-03-18 06:58:32'),
-(6, 1, 3, 'uploads\\1773830353068-100712691.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-18 10:39:13', '2026-03-18 10:39:38'),
-(7, 1, NULL, 'uploads\\1774266866377-549292814.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-23 11:54:26', '2026-03-23 11:54:51'),
-(8, 1, NULL, 'uploads\\1774267047989-162565475.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-23 11:57:28', '2026-03-23 11:57:54'),
-(9, 1, NULL, 'uploads\\1774267156085-85222747.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-23 11:59:16', '2026-03-23 11:59:43'),
-(10, 1, NULL, 'uploads\\1774267357786-266221339.webp', NULL, NULL, NULL, NULL, NULL, 'processing', NULL, '2026-03-23 12:02:37', '2026-03-23 12:02:37'),
-(11, 1, NULL, 'uploads\\1774267478997-803764362.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-23 12:04:39', '2026-03-23 12:05:04'),
-(12, 1, NULL, 'uploads\\1774267657776-998141481.webp', NULL, NULL, NULL, NULL, NULL, 'processing', NULL, '2026-03-23 12:07:37', '2026-03-23 12:07:37'),
-(13, 1, NULL, 'uploads\\1774267740283-785830123.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-23 12:09:00', '2026-03-23 12:09:27'),
-(14, 1, NULL, 'uploads\\1774338507528-601618188.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-24 07:48:27', '2026-03-24 07:48:54'),
-(15, 1, NULL, 'uploads\\1774338595420-509279886.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-24 07:49:55', '2026-03-24 07:50:21'),
-(16, 1, NULL, 'uploads\\1774339449002-402335791.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-24 08:04:09', '2026-03-24 08:04:36'),
-(17, 1, NULL, 'uploads\\1774339597695-174830570.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-24 08:06:37', '2026-03-24 08:07:03'),
-(18, 1, NULL, 'uploads\\1774340809279-51029457.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-24 08:26:49', '2026-03-24 08:27:14'),
-(19, 1, NULL, 'uploads\\1774351261927-133550455.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-24 11:21:01', '2026-03-24 11:21:29'),
-(20, 1, NULL, 'uploads\\1774418442022-441268206.webp', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-25 06:00:42', '2026-03-25 06:00:53'),
-(21, 1, NULL, 'uploads\\1774418643243-971975894.webp', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-25 06:04:03', '2026-03-25 06:04:13'),
-(22, 1, NULL, 'uploads\\1774419932756-575292332.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 06:25:32', '2026-03-25 06:26:38'),
-(23, 1, NULL, 'uploads\\1774420154896-392518159.webp', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-25 06:29:14', '2026-03-25 06:29:15'),
-(24, 1, NULL, 'uploads\\1774420406777-138422012.webp', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-25 06:33:26', '2026-03-25 06:33:27'),
-(25, 1, NULL, 'uploads\\1774420421054-815701292.webp', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-25 06:33:41', '2026-03-25 06:33:45'),
-(26, 1, NULL, 'uploads\\1774420455172-581305384.webp', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-25 06:34:15', '2026-03-25 06:34:19'),
-(27, 1, NULL, 'uploads\\1774420472991-32458426.webp', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-25 06:34:33', '2026-03-25 06:34:37'),
-(28, 1, NULL, 'uploads\\1774420488624-618507742.webp', NULL, NULL, NULL, NULL, NULL, 'failed', NULL, '2026-03-25 06:34:48', '2026-03-25 06:34:53'),
-(29, 1, NULL, 'uploads\\1774420525006-364724427.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 06:35:25', '2026-03-25 06:35:50'),
-(30, 1, NULL, 'uploads\\1774420625882-239995102.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 06:37:05', '2026-03-25 06:38:10'),
-(31, 1, NULL, 'uploads\\1774421395936-505367300.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 06:49:55', '2026-03-25 06:51:03'),
-(32, 1, NULL, 'uploads\\1774421962326-948326494.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 06:59:22', '2026-03-25 07:00:27'),
-(33, 1, NULL, 'uploads\\1774422069661-632530910.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 07:01:09', '2026-03-25 07:02:12'),
-(34, 1, NULL, 'uploads\\1774422780646-916327745.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 07:13:00', '2026-03-25 07:14:05'),
-(35, 1, NULL, 'uploads\\1774422889571-346321271.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 07:14:49', '2026-03-25 07:15:57'),
-(36, 1, NULL, 'uploads\\1774423031380-988151667.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 07:17:11', '2026-03-25 07:18:14'),
-(37, 1, NULL, 'uploads\\1774423495692-741386153.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 07:24:55', '2026-03-25 07:25:19'),
-(38, 1, NULL, 'uploads\\1774423607199-836750271.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 07:26:47', '2026-03-25 07:27:10'),
-(39, 1, NULL, 'uploads\\1774441033671-767576731.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-25 12:17:13', '2026-03-25 12:17:40'),
-(40, 1, NULL, 'uploads\\1774505020489-972966104.webp', NULL, NULL, NULL, NULL, NULL, 'processing', NULL, '2026-03-26 06:03:40', '2026-03-26 06:03:40'),
-(41, 1, NULL, 'uploads\\1774505041724-131202266.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-26 06:04:01', '2026-03-26 06:04:26'),
-(42, 1, NULL, 'uploads\\1774512623673-205143434.webp', NULL, NULL, NULL, NULL, NULL, 'processing', NULL, '2026-03-26 08:10:23', '2026-03-26 08:10:23'),
-(43, 1, NULL, 'uploads\\1774512733832-194002519.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-26 08:12:13', '2026-03-26 08:12:43'),
-(44, 1, NULL, 'uploads\\1774512814231-866530685.webp', NULL, NULL, NULL, NULL, NULL, 'completed', NULL, '2026-03-26 08:13:34', '2026-03-26 08:14:51');
 
 -- --------------------------------------------------------
 
@@ -377,6 +316,20 @@ INSERT INTO `nutrition_goals` (`id`, `goal_key`, `label`, `description`, `is_act
 (4, 'low_sugar', 'Low Sugar', 'low sugar — avoid sugary items, use natural fruit only', 1, '2026-03-16 10:22:52', '2026-03-16 10:22:52'),
 (5, 'low_carb', 'Low Carb', 'low carb — minimize bread and starchy foods, favour protein and vegetables', 1, '2026-03-16 10:22:52', '2026-03-16 10:22:52'),
 (6, 'high_fiber', 'High Fiber', 'high fiber — include whole grains, legumes, fruits, and vegetables', 1, '2026-03-16 10:22:52', '2026-03-16 10:22:52');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `password_reset_tokens`
+--
+
+CREATE TABLE `password_reset_tokens` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -416,6 +369,13 @@ CREATE TABLE `session_allergen_overrides` (
   `allergen_id` smallint(5) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `session_allergen_overrides`
+--
+
+INSERT INTO `session_allergen_overrides` (`session_id`, `allergen_id`) VALUES
+(3, 14);
+
 -- --------------------------------------------------------
 
 --
@@ -434,13 +394,46 @@ CREATE TABLE `users` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+
 --
--- Dumping data for table `users`
+-- Table structure for table `user_fcm_tokens`
 --
 
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `provider`, `provider_id`, `avatar_url`, `created_at`, `updated_at`) VALUES
-(1, 'abc@lunchboxai.com', '$2b$12$SvuwdKeek4.2UwznZhbQbOy8w3qW9IF45joniIzVFDmD.40Ez.zxS', 'aaa', 'local', NULL, NULL, '2026-03-17 11:26:09', '2026-03-17 11:26:09'),
-(2, 'parent196@example.com', '$2b$12$1btFDTcArkBAM3snn3MI3OQN9wJT5lowgo0Cb9gRGdLOOXP0w3ne2', 'Jane Smith', 'local', NULL, NULL, '2026-03-23 05:48:30', '2026-03-23 05:48:30');
+CREATE TABLE `user_fcm_tokens` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `token` varchar(512) NOT NULL,
+  `notifications_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `_migrations`
+--
+
+CREATE TABLE `_migrations` (
+  `id` int(11) NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `applied_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `_migrations`
+--
+
+INSERT INTO `_migrations` (`id`, `filename`, `applied_at`) VALUES
+(1, 'add_session_flags.sql', '2026-03-31 09:24:03'),
+(2, 'create_base_lunchboxes.sql', '2026-03-31 09:24:15'),
+(3, 'update_base_lunchboxes_image_path.sql', '2026-03-31 09:24:15'),
+(4, 'create_user_fcm_tokens.sql', '2026-04-06 06:27:50'),
+(5, 'widen_nutrition_goal_override.sql', '2026-04-06 06:27:50'),
+(6, '001_create_user_fcm_tokens.sql', '2026-04-06 08:37:08'),
+(7, '003_password_reset_tokens.sql', '2026-04-06 08:37:08'),
+(8, '004_add_notifications_enabled_if_missing.sql', '2026-04-06 08:38:40');
 
 --
 -- Indexes for dumped tables
@@ -460,20 +453,19 @@ ALTER TABLE `avatars`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `base_lunchboxes`
+--
+ALTER TABLE `base_lunchboxes`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `children`
 --
 ALTER TABLE `children`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_children_avatar` (`avatar_id`),
-  ADD KEY `fk_children_default_lb` (`default_lunchbox_id`),
-  ADD KEY `idx_children_user` (`user_id`);
-
---
--- Indexes for table `child_lunchboxes`
---
-ALTER TABLE `child_lunchboxes`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_child_id` (`child_id`);
+  ADD KEY `idx_children_user` (`user_id`),
+  ADD KEY `fk_children_default_lb` (`default_lunchbox_id`);
 
 --
 -- Indexes for table `child_allergens`
@@ -481,6 +473,13 @@ ALTER TABLE `child_lunchboxes`
 ALTER TABLE `child_allergens`
   ADD PRIMARY KEY (`child_id`,`allergen_id`),
   ADD KEY `fk_ca_allergen` (`allergen_id`);
+
+--
+-- Indexes for table `child_lunchboxes`
+--
+ALTER TABLE `child_lunchboxes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_child_id` (`child_id`);
 
 --
 -- Indexes for table `child_nutrition_goals`
@@ -534,6 +533,15 @@ ALTER TABLE `nutrition_goals`
   ADD UNIQUE KEY `goal_key` (`goal_key`);
 
 --
+-- Indexes for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_token_hash` (`token_hash`),
+  ADD KEY `idx_user` (`user_id`),
+  ADD KEY `idx_expires` (`expires_at`);
+
+--
 -- Indexes for table `school_rules`
 --
 ALTER TABLE `school_rules`
@@ -555,6 +563,21 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `email` (`email`);
 
 --
+-- Indexes for table `user_fcm_tokens`
+--
+ALTER TABLE `user_fcm_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_fcm_token` (`token`),
+  ADD KEY `idx_user_fcm_user` (`user_id`);
+
+--
+-- Indexes for table `_migrations`
+--
+ALTER TABLE `_migrations`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `filename` (`filename`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -571,10 +594,16 @@ ALTER TABLE `avatars`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
+-- AUTO_INCREMENT for table `base_lunchboxes`
+--
+ALTER TABLE `base_lunchboxes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
 -- AUTO_INCREMENT for table `children`
 --
 ALTER TABLE `children`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `child_lunchboxes`
@@ -592,7 +621,7 @@ ALTER TABLE `food_items`
 -- AUTO_INCREMENT for table `ingredient_images`
 --
 ALTER TABLE `ingredient_images`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `lunchbox_results`
@@ -604,13 +633,19 @@ ALTER TABLE `lunchbox_results`
 -- AUTO_INCREMENT for table `lunchbox_sessions`
 --
 ALTER TABLE `lunchbox_sessions`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `nutrition_goals`
 --
 ALTER TABLE `nutrition_goals`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `school_rules`
@@ -622,25 +657,31 @@ ALTER TABLE `school_rules`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `user_fcm_tokens`
+--
+ALTER TABLE `user_fcm_tokens`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `_migrations`
+--
+ALTER TABLE `_migrations`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Constraints for dumped tables
 --
 
 --
--- Constraints for table `child_lunchboxes`
---
-ALTER TABLE `child_lunchboxes`
-  ADD CONSTRAINT `fk_cl_child` FOREIGN KEY (`child_id`) REFERENCES `children` (`id`) ON DELETE CASCADE;
-
---
 -- Constraints for table `children`
 --
 ALTER TABLE `children`
   ADD CONSTRAINT `fk_children_avatar` FOREIGN KEY (`avatar_id`) REFERENCES `avatars` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `fk_children_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_children_default_lb` FOREIGN KEY (`default_lunchbox_id`) REFERENCES `child_lunchboxes` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `fk_children_default_lb` FOREIGN KEY (`default_lunchbox_id`) REFERENCES `child_lunchboxes` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_children_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `child_allergens`
@@ -648,6 +689,12 @@ ALTER TABLE `children`
 ALTER TABLE `child_allergens`
   ADD CONSTRAINT `fk_ca_allergen` FOREIGN KEY (`allergen_id`) REFERENCES `allergens` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_ca_child` FOREIGN KEY (`child_id`) REFERENCES `children` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `child_lunchboxes`
+--
+ALTER TABLE `child_lunchboxes`
+  ADD CONSTRAINT `fk_cl_child` FOREIGN KEY (`child_id`) REFERENCES `children` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `child_nutrition_goals`
@@ -683,72 +730,23 @@ ALTER TABLE `lunchbox_sessions`
   ADD CONSTRAINT `fk_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD CONSTRAINT `fk_pwd_reset_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `session_allergen_overrides`
 --
 ALTER TABLE `session_allergen_overrides`
   ADD CONSTRAINT `fk_sao_allergen` FOREIGN KEY (`allergen_id`) REFERENCES `allergens` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_sao_session` FOREIGN KEY (`session_id`) REFERENCES `lunchbox_sessions` (`id`) ON DELETE CASCADE;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `user_fcm_tokens`
---
-
-CREATE TABLE `user_fcm_tokens` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `user_id` int(10) UNSIGNED NOT NULL,
-  `token` varchar(512) NOT NULL,
-  `notifications_enabled` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Indexes for table `user_fcm_tokens`
---
-ALTER TABLE `user_fcm_tokens`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_fcm_token` (`token`),
-  ADD KEY `idx_user_fcm_user` (`user_id`);
-
---
--- AUTO_INCREMENT for table `user_fcm_tokens`
---
-ALTER TABLE `user_fcm_tokens`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
 --
 -- Constraints for table `user_fcm_tokens`
 --
 ALTER TABLE `user_fcm_tokens`
   ADD CONSTRAINT `fk_fcm_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `password_reset_tokens`
---
-
-CREATE TABLE `password_reset_tokens` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `user_id` int(10) UNSIGNED NOT NULL,
-  `token_hash` char(64) NOT NULL,
-  `expires_at` datetime NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-ALTER TABLE `password_reset_tokens`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_token_hash` (`token_hash`),
-  ADD KEY `idx_user` (`user_id`),
-  ADD KEY `idx_expires` (`expires_at`);
-
-ALTER TABLE `password_reset_tokens`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `password_reset_tokens`
-  ADD CONSTRAINT `fk_pwd_reset_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
