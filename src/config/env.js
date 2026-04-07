@@ -40,6 +40,14 @@ module.exports = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   /** Required for POST /api/notifications/broadcast (header X-Broadcast-Secret) */
   broadcastSecret: process.env.BROADCAST_SECRET || '',
+  s3: {
+    bucket: process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || '',
+    region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'eu-north-1',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    /** Optional CloudFront or custom origin; default https://bucket.s3.region.amazonaws.com/key */
+    publicBaseUrl: (process.env.AWS_S3_PUBLIC_URL || '').replace(/\/$/, ''),
+  },
   smtp: {
     host: process.env.SMTP_HOST || '',
     port: parseInt(process.env.SMTP_PORT, 10) || 587,

@@ -6,12 +6,19 @@ const path  = require('path');
 
 const { UPLOAD_DIR } = require('../config/constants');
 const { appBaseUrl } = require('../config/env');
+const s3 = require('./s3Service');
 
 const MAX_DIMENSION = 1568;
 
 function buildPublicFileUrl(relativePath) {
   if (!relativePath) return null;
-  const rel = String(relativePath).replace(/\\/g, '/').replace(/^\//, '');
+  const raw = String(relativePath).replace(/\\/g, '/');
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith('s3:')) {
+    const key = raw.slice(3);
+    return s3.publicUrlForKey(key);
+  }
+  const rel = raw.replace(/^\//, '');
   const base = String(appBaseUrl || '').replace(/\/$/, '');
   return `${base}/${rel}`;
 }
@@ -37,10 +44,15 @@ async function saveGeneratedLunchboxImage({ dataUrl, base64 }) {
   }
   if (!buffer || !buffer.length) throw new Error('No image data to save');
 
+  const filename = `generated-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
+
+  if (s3.isS3Configured()) {
+    return s3.uploadGeneratedPng(buffer, filename);
+  }
+
   const dir = path.join(process.cwd(), UPLOAD_DIR);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-  const filename = `generated-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`;
   const fsPath = path.join(dir, filename);
   await fs.promises.writeFile(fsPath, buffer);
   return path.join(UPLOAD_DIR, filename);
@@ -75,14 +87,25 @@ async function deleteFile(filePath) {
   }
 }
 
+async function deleteStoredFile(stored) {
+  if (!stored) return;
+  const key = s3.storedToS3Key(stored);
+  if (key) {
+    await s3.deleteObjectByKey(key);
+    return;
+  }
+  await deleteFile(stored);
+}
+
 async function deleteFiles(filePaths) {
-  await Promise.all((filePaths || []).map(deleteFile));
+  await Promise.all((filePaths || []).map(deleteStoredFile));
 }
 
 module.exports = {
   resizeForApi,
   getMimeTypeFromPath,
   deleteFile,
+  deleteStoredFile,
   deleteFiles,
   buildPublicFileUrl,
   saveGeneratedLunchboxImage,
