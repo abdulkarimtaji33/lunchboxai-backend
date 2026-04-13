@@ -10,8 +10,10 @@ const openai = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
 });
 
-// --- Exact same vision prompt as working server.js ---
-const VISION_PROMPT = `Analyze this lunchbox image carefully and describe it. I should be able to recreate the lunchbox exactly. Start your response directly with the description.`;
+const VISION_PROMPT =
+  'Analyze this lunchbox image. Count compartment wells only from what you see (indented/divided areas meant to hold food) — do not assume a count from names or text. ' +
+  'Describe the container so it could be recreated exactly; explicitly state how many compartments you counted (e.g. "four compartments"). ' +
+  'Start your response directly with the description. dont count the lid of the lunchbox.';
 
 // --- Exact same compartment/shape/orientation parsing as working server.js ---
 function parseLunchboxDescription(description) {

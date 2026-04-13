@@ -87,7 +87,7 @@ async function createSession(req, res, next) {
     if (base_lunchbox_id) {
       const bl = await BaseLunchbox.findById(base_lunchbox_id);
       if (bl) {
-        baseLunchboxNote = `Container: ${bl.name} (${bl.container_type}, ${bl.compartments} compartment${bl.compartments > 1 ? 's' : ''}). ${bl.description || ''}`;
+        baseLunchboxNote = `Container: ${bl.name} (${bl.container_type}). ${bl.description || ''}`;
       }
     }
     const effectiveNotes = [notes, baseLunchboxNote].filter(Boolean).join(' | ') || null;
@@ -269,7 +269,7 @@ async function createSessionOpenRouter(req, res, next) {
     if (or_base_lunchbox_id) {
       const bl = await BaseLunchbox.findById(or_base_lunchbox_id);
       if (bl) {
-        orBaseLunchboxNote = `Container: ${bl.name} (${bl.container_type}, ${bl.compartments} compartment${bl.compartments > 1 ? 's' : ''}). ${bl.description || ''}`;
+        orBaseLunchboxNote = `Container: ${bl.name} (${bl.container_type}). ${bl.description || ''}`;
       }
     }
     const orEffectiveNotes = [notes, orBaseLunchboxNote].filter(Boolean).join(' | ') || null;

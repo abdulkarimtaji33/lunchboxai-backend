@@ -177,7 +177,7 @@ async function generateFilledLunchboxEdit({ lunchboxImagePath, lunchboxDescripti
 STRICT REQUIREMENTS:
 - Keep the lunchbox container exactly as shown (same shape, color, compartment layout)
 - Container must remain OPEN (no lid, no cover)
-- Fill EACH of the ${compartmentCount} compartments with ONE age-appropriate, kid-friendly food item
+- Fill EACH of the ${compartmentCount} compartments with ONE age-appropriate, kid-friendly food item (match the wells visible in this photo)
 ${ingredientLine}
 - Use exactly ${compartmentCount} foods total (one per compartment)
 - Each food should look fresh, appetizing, and realistic
@@ -249,7 +249,7 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
 }
 
 // --- OpenRouter flow: uses gpt-5-image-mini via chat completions ---
-async function generateFilledLunchboxOpenRouter({ lunchboxImagePath, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
+async function generateFilledLunchboxOpenRouter({ lunchboxImagePath, lunchboxDescription, compartmentCount: _compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
   const ingredientLine = identifiedIngredients
     ? `- AVAILABLE INGREDIENTS: ${identifiedIngredients}`
     : '- You decide what foods to add — varied, balanced, kid-friendly; do not use a fixed or example list.';
@@ -260,11 +260,12 @@ async function generateFilledLunchboxOpenRouter({ lunchboxImagePath, lunchboxDes
 STRICT REQUIREMENTS:
 - Keep the lunchbox container exactly as shown (same shape, color, compartment layout)
 - Container must remain OPEN (no lid, no cover)
-- Fill EACH of the ${compartmentCount} compartments with ONE age-appropriate, kid-friendly food item
+- Fill each distinct compartment well visible in this photo with ONE age-appropriate, kid-friendly food item (one food per well; match the number of foods to the wells you see)
 ${ingredientLine}
-- Use exactly ${compartmentCount} foods total (one per compartment)
 - Each food should look fresh, appetizing, and realistic
 - Do NOT add extra containers, trays, or duplicate lunchboxes
+- Do NOT add or remove any compartments.
+- Do NOT fill the lid of the lunchbox.
 ${sessionPreferencesBlock(sessionContext)}
 CRITICAL COMPOSITION RULES:
 - The lunchbox must be fully visible within the frame
