@@ -182,6 +182,7 @@ ${ingredientLine}
 - Use exactly ${compartmentCount} foods total (one per compartment)
 - Each food should look fresh, appetizing, and realistic
 - Do NOT add extra containers, trays, or duplicate lunchboxes
+- Do NOT add or remove any compartments. Do NOT change the shape of the lunchbox.
 ${COVER_AND_LID_RULES}
 ${sessionPreferencesBlock(sessionContext)}
 Style: Bright natural lighting, sharp focus, professional food photography.`;
