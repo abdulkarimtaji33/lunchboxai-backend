@@ -172,10 +172,12 @@ async function generateFilledLunchboxEdit({ lunchboxImagePath, lunchboxDescripti
     : '- You decide what foods to add — varied, balanced, kid-friendly; do not use a fixed or example list.';
 
   const editPrompt =
-    `This is a photo of an empty lunchbox. Fill it with food items.
+    `This is a photo of an empty lunchbox matching this description: ${lunchboxDescription}
+
+Fill it with food items.
 
 STRICT REQUIREMENTS:
-- Keep the lunchbox container exactly as shown (same shape, color, compartment layout)
+- Keep the lunchbox container exactly as shown (same shape, color, compartment layout); the photo and the description above must agree
 - Container must remain OPEN (no lid, no cover)
 - Fill EACH of the ${compartmentCount} compartments with ONE age-appropriate, kid-friendly food item (match the wells visible in this photo)
 ${ingredientLine}
@@ -256,10 +258,12 @@ async function generateFilledLunchboxOpenRouter({ lunchboxImagePath, lunchboxDes
     : '- You decide what foods to add — varied, balanced, kid-friendly; do not use a fixed or example list.';
 
   const prompt =
-    `This is a photo of an empty lunchbox. Fill it with food items.
+    `This is a photo of an empty lunchbox matching this description: ${lunchboxDescription}
+
+Fill it with food items.
 
 STRICT REQUIREMENTS:
-- Keep the lunchbox container exactly as shown (same shape, color, compartment layout)
+- Keep the lunchbox container exactly as shown (same shape, color, compartment layout); the photo and the description above must agree
 - Container must remain OPEN (no lid, no cover)
 - Fill each distinct compartment well visible in this photo with ONE age-appropriate, kid-friendly food item (one food per well; match the number of foods to the wells you see)
 ${ingredientLine}
