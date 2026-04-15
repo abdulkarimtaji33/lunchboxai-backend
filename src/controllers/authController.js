@@ -145,6 +145,15 @@ function handleOAuthCallback(req, res) {
 
 const RESET_GENERIC = 'If an account exists for this email, we sent password reset instructions.';
 
+function hashPasswordResetOtp(otp) {
+  const pepper = env.passwordResetOtpPepper || '';
+  return crypto.createHash('sha256').update(`otp:${String(otp)}:${pepper}`, 'utf8').digest('hex');
+}
+
+function generateSixDigitOtp() {
+  return String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+}
+
 async function forgotPassword(req, res, next) {
   try {
     const email = String(req.body.email || '').trim();
@@ -162,12 +171,14 @@ async function forgotPassword(req, res, next) {
     await PasswordResetToken.deleteForUser(user.id);
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const otp = generateSixDigitOtp();
+    const otpHash = hashPasswordResetOtp(otp);
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-    await PasswordResetToken.create({ userId: user.id, tokenHash, expiresAt });
+    await PasswordResetToken.create({ userId: user.id, tokenHash, otpHash, expiresAt });
 
     const resetUrl = `${env.frontendUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(rawToken)}`;
     try {
-      await sendPasswordResetEmail(user.email, resetUrl);
+      await sendPasswordResetEmail(user.email, { resetUrl, otp });
     } catch (e) {
       console.error('forgotPassword: send mail failed:', e.message);
       await PasswordResetToken.deleteByHash(tokenHash);
@@ -182,20 +193,40 @@ async function forgotPassword(req, res, next) {
 
 async function resetPassword(req, res, next) {
   try {
-    const { token, newPassword } = req.body;
-    const raw = String(token || '').trim();
-    if (!raw) {
-      return res.status(400).json(formatError('Token required', 'VALIDATION_ERROR'));
-    }
-    const tokenHash = crypto.createHash('sha256').update(raw).digest('hex');
-    const row = await PasswordResetToken.findValidByHash(tokenHash);
-    if (!row) {
-      return res.status(400).json(formatError('Invalid or expired reset link. Request a new one.', 'INVALID_TOKEN'));
+    const { token, email, otp, newPassword } = req.body;
+    let userId = null;
+
+    if (email != null && String(email).trim() && otp != null) {
+      const user = await User.findByEmailInsensitive(String(email).trim());
+      if (!user || !user.password_hash) {
+        return res.status(400).json(formatError('Invalid or expired code. Request a new one.', 'INVALID_TOKEN'));
+      }
+      const otpClean = String(otp).replace(/\D/g, '').slice(0, 6);
+      if (!/^\d{6}$/.test(otpClean)) {
+        return res.status(400).json(formatError('Enter the 6-digit code from your email.', 'VALIDATION_ERROR'));
+      }
+      const otpHash = hashPasswordResetOtp(otpClean);
+      const row = await PasswordResetToken.findValidByUserIdAndOtpHash(user.id, otpHash);
+      if (!row) {
+        return res.status(400).json(formatError('Invalid or expired code. Request a new one.', 'INVALID_TOKEN'));
+      }
+      userId = row.user_id;
+    } else {
+      const raw = String(token || '').trim();
+      if (!raw) {
+        return res.status(400).json(formatError('Token or email and code required', 'VALIDATION_ERROR'));
+      }
+      const tokenHash = crypto.createHash('sha256').update(raw).digest('hex');
+      const row = await PasswordResetToken.findValidByHash(tokenHash);
+      if (!row) {
+        return res.status(400).json(formatError('Invalid or expired reset link. Request a new one.', 'INVALID_TOKEN'));
+      }
+      userId = row.user_id;
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await User.updatePasswordHash(row.user_id, passwordHash);
-    await PasswordResetToken.deleteForUser(row.user_id);
+    await User.updatePasswordHash(userId, passwordHash);
+    await PasswordResetToken.deleteForUser(userId);
 
     return res.json(formatResponse({ message: 'Password updated. You can sign in now.' }));
   } catch (err) {

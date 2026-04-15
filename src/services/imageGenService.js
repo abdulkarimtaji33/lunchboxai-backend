@@ -168,8 +168,31 @@ Style: Clean white background, bright natural lighting, sharp focus, appetizing 
 // --- Image EDIT flow: uses the actual lunchbox photo as base image ---
 async function generateFilledLunchboxEdit({ lunchboxImagePath, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
   const ingredientLine = identifiedIngredients
-    ? `- AVAILABLE INGREDIENTS: ${identifiedIngredients}`
-    : '- You decide what foods to add — varied, balanced, kid-friendly; do not use a fixed or example list.';
+    ? `- AVAILABLE INGREDIENTS (that must be used): ${identifiedIngredients}`
+    : '- You decide what foods to add — varied, balanced, kid-friendly with ONE main dish';
+
+  const n = Number(compartmentCount);
+  const singleCavity = n === 1;
+  const fillRules = singleCavity
+    ? `- Keep the lunchbox container exactly as shown (same shape, color); the photo and the description above must agree
+- Container must remain OPEN (no lid, no cover)
+- This lunchbox has ONE undivided interior — no dividers, walls, or separate wells. Do NOT add any internal partitions or lines that split the space into multiple compartments.
+${ingredientLine}
+- Fill that single open space with age-appropriate, kid-friendly food (a small natural mix in one cavity is fine)
+- Each food should look fresh, appetizing, and realistic
+- This is the lunchbox of a single kid, so the food variety and quantity should be appropriate for a child.
+- Do NOT add any lines or dividers or compartments inside the lunchbox. 
+- Do NOT change the inner shape of the lunchbox.
+- Do NOT add extra containers, trays, or duplicate lunchboxes
+- Do NOT change the outer shape of the lunchbox or introduce any divisions inside it.`
+    : `- Keep the lunchbox container exactly as shown (same shape, color, compartment layout); the photo and the description above must agree
+- Container must remain OPEN (no lid, no cover)
+- Fill EACH of the ${compartmentCount} compartments with ONE age-appropriate, kid-friendly food item (match the wells visible in this photo)
+${ingredientLine}
+- Use exactly ${compartmentCount} foods total (one per compartment)
+- Each food should look fresh, appetizing, and realistic
+- Do NOT add extra containers, trays, or duplicate lunchboxes
+- Do NOT add or remove any compartments. Do NOT change the shape of the lunchbox.`;
 
   const editPrompt =
     `This is a photo of an empty lunchbox matching this description: ${lunchboxDescription}
@@ -177,14 +200,7 @@ async function generateFilledLunchboxEdit({ lunchboxImagePath, lunchboxDescripti
 Fill it with food items.
 
 STRICT REQUIREMENTS:
-- Keep the lunchbox container exactly as shown (same shape, color, compartment layout); the photo and the description above must agree
-- Container must remain OPEN (no lid, no cover)
-- Fill EACH of the ${compartmentCount} compartments with ONE age-appropriate, kid-friendly food item (match the wells visible in this photo)
-${ingredientLine}
-- Use exactly ${compartmentCount} foods total (one per compartment)
-- Each food should look fresh, appetizing, and realistic
-- Do NOT add extra containers, trays, or duplicate lunchboxes
-- Do NOT add or remove any compartments. Do NOT change the shape of the lunchbox.
+${fillRules}
 ${COVER_AND_LID_RULES}
 ${sessionPreferencesBlock(sessionContext)}
 Style: Bright natural lighting, sharp focus, professional food photography.`;
@@ -252,10 +268,35 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
 }
 
 // --- OpenRouter flow: uses gpt-5-image-mini via chat completions ---
-async function generateFilledLunchboxOpenRouter({ lunchboxImagePath, lunchboxDescription, compartmentCount: _compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
+async function generateFilledLunchboxOpenRouter({ lunchboxImagePath, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
   const ingredientLine = identifiedIngredients
     ? `- AVAILABLE INGREDIENTS: ${identifiedIngredients}`
     : '- You decide what foods to add — varied, balanced, kid-friendly; do not use a fixed or example list.';
+
+  const n = Number(compartmentCount);
+  const singleCavity = n === 1;
+  const fillRules = singleCavity
+    ? `- Keep the lunchbox container exactly as shown (same shape, color); the photo and the description above must agree
+- Container must remain OPEN (no lid, no cover)
+- This lunchbox has ONE undivided interior — no dividers or separate wells. Do NOT add internal partitions or lines that split the space into multiple compartments.
+${ingredientLine}
+- Fill that single open space with age-appropriate, kid-friendly food (a small natural mix in one cavity is fine)
+- Each food should look fresh, appetizing, and realistic
+- Do NOT add extra containers, trays, or duplicate lunchboxes
+- Do NOT introduce any divisions inside the lunchbox.
+- Do NOT fill the lid of the lunchbox.`
+    : `- Keep the lunchbox container exactly as shown (same shape, color, compartment layout); the photo and the description above must agree
+- Container must remain OPEN (no lid, no cover)
+- Fill each distinct compartment well visible in this photo with ONE age-appropriate, kid-friendly food item (one food per well; match the number of foods to the wells you see)
+${ingredientLine}
+- Each food should look fresh, appetizing, and realistic
+- Do NOT add extra containers, trays, or duplicate lunchboxes
+- Do NOT add or remove any compartments.
+- Do NOT fill the lid of the lunchbox.`;
+
+  const compositionCompartments = singleCavity
+    ? '- Preserve one continuous interior — no new dividers; spacing should match the empty photo'
+    : '- Preserve exact positioning and spacing of all compartments';
 
   const prompt =
     `This is a photo of an empty lunchbox matching this description: ${lunchboxDescription}
@@ -263,20 +304,13 @@ async function generateFilledLunchboxOpenRouter({ lunchboxImagePath, lunchboxDes
 Fill it with food items.
 
 STRICT REQUIREMENTS:
-- Keep the lunchbox container exactly as shown (same shape, color, compartment layout); the photo and the description above must agree
-- Container must remain OPEN (no lid, no cover)
-- Fill each distinct compartment well visible in this photo with ONE age-appropriate, kid-friendly food item (one food per well; match the number of foods to the wells you see)
-${ingredientLine}
-- Each food should look fresh, appetizing, and realistic
-- Do NOT add extra containers, trays, or duplicate lunchboxes
-- Do NOT add or remove any compartments.
-- Do NOT fill the lid of the lunchbox.
+${fillRules}
 ${sessionPreferencesBlock(sessionContext)}
 CRITICAL COMPOSITION RULES:
 - The lunchbox must be fully visible within the frame
 - Do NOT zoom in or crop any part of the lunchbox, its better to zoom out so the lunchbox is fully visible.
 - Maintain identical framing, margins, and camera distance as the original image
-- Preserve exact positioning and spacing of all compartments
+${compositionCompartments}
 - The output must look like the SAME photo, only with food added
 ${COVER_AND_LID_RULES}
 

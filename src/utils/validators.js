@@ -16,10 +16,17 @@ const forgotPasswordSchema = Joi.object({
   email: Joi.string().email().required(),
 });
 
-const resetPasswordSchema = Joi.object({
-  token: Joi.string().min(20).required(),
-  newPassword: Joi.string().min(6).max(128).required(),
-});
+const resetPasswordSchema = Joi.alternatives().try(
+  Joi.object({
+    token: Joi.string().min(20).required(),
+    newPassword: Joi.string().min(6).max(128).required(),
+  }),
+  Joi.object({
+    email: Joi.string().email().required(),
+    otp: Joi.string().pattern(/^\d{6}$/).required(),
+    newPassword: Joi.string().min(6).max(128).required(),
+  })
+);
 
 const googleIdTokenSchema = Joi.object({
   idToken: Joi.string().min(20).optional(),

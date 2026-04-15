@@ -17,10 +17,14 @@ const VISION_PROMPT =
 
 // --- Exact same compartment/shape/orientation parsing as working server.js ---
 function parseLunchboxDescription(description) {
-  const WORD_TO_NUM = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8 };
-  const countMatch = description.match(/(\d+|one|two|three|four|five|six|seven|eight)\s+(?:compartments?|sections?|parts?)/i);
+  const WORD_TO_NUM = { single:1, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8 };
+  const countMatch = description.match(/(\d+|single|one|two|three|four|five|six|seven|eight)\s+(?:compartments?|sections?|parts?)/i);
+  // also catch "no dividers", "no divisions", "no additional dividers", "undivided"
+  const noDividers = /\b(no\s+(additional\s+)?(dividers?|divisions?|sections?|compartments?|partitions?)|undivided|single\s+compartment|single\s+space)\b/i.test(description);
   let compartmentCount = 3;
-  if (countMatch) {
+  if (noDividers) {
+    compartmentCount = 1;
+  } else if (countMatch) {
     const raw = countMatch[1].toLowerCase();
     const n = WORD_TO_NUM[raw] ?? parseInt(raw, 10);
     compartmentCount = Math.max(1, Math.min(8, n));
@@ -78,15 +82,25 @@ async function nutritionGoalsTextFromKeys(keys) {
   const parts = [];
   for (const key of keys) {
     const g = await NutritionGoal.findByKey(key);
-    if (g) parts.push(`${g.label} (${g.description || g.goal_key})`);
+    if (g) parts.push(g.label);
     else parts.push(key);
   }
   return parts.join('; ');
 }
 
+function schoolRulesFromProfile(schoolRules) {
+  if (!schoolRules?.length) return '';
+  return schoolRules
+    .map(r => {
+      const d = r.description && String(r.description).trim();
+      return d ? `${r.name}: ${d}` : r.name;
+    })
+    .join('; ');
+}
+
 /**
- * Session + child context for vision and image prompts. Always includes session notes,
- * nutrition goals, prep, dislikes, and school rules when provided — even without a child.
+ * Session + child context for vision and image prompts. Includes child profile school rules
+ * and nutrition goals, merged with session overrides; session notes, prep, dislikes; allergens.
  */
 async function buildSessionAiContext({ child, allergens = [], sessionOverrides = {} }) {
   const lines = [];
@@ -98,8 +112,14 @@ async function buildSessionAiContext({ child, allergens = [], sessionOverrides =
   const dislikes = sessionOverrides.dislikes_override;
   if (dislikes) lines.push(`- Foods to avoid (dislikes): ${dislikes}`);
 
+  const profileSchoolText = schoolRulesFromProfile(child?.school_rules);
   const schoolRules = sessionOverrides.school_rules_override;
-  if (schoolRules) lines.push(`- School rules: ${schoolRules}`);
+  if (profileSchoolText || schoolRules) {
+    const parts = [];
+    if (profileSchoolText) parts.push(profileSchoolText);
+    if (schoolRules && String(schoolRules).trim()) parts.push(String(schoolRules).trim());
+    lines.push(`- School rules: ${parts.join(' — ')}`);
+  }
 
   const prepTime = sessionOverrides.prep_time_minutes;
   if (prepTime) lines.push(`- Max prep time: ${prepTime} minutes`);
@@ -108,8 +128,10 @@ async function buildSessionAiContext({ child, allergens = [], sessionOverrides =
     lines.push(`- Strictly avoid (allergens): ${allergens.map(a => `${a.name} (${a.severity})`).join(', ')}`);
   }
 
-  const goalKeys = parseNutritionGoalKeys(sessionOverrides.nutrition_goal_override);
-  const nutText = await nutritionGoalsTextFromKeys(goalKeys);
+  const profileNutritionKeys = (child?.nutrition_goals || []).map(g => g.goal_key).filter(Boolean);
+  const sessionNutritionKeys = parseNutritionGoalKeys(sessionOverrides.nutrition_goal_override);
+  const nutritionKeysMerged = [...new Set([...profileNutritionKeys, ...sessionNutritionKeys])];
+  const nutText = await nutritionGoalsTextFromKeys(nutritionKeysMerged);
   if (nutText) lines.push(`- Nutritional goals: ${nutText}`);
 
   if (child?.calorie_target) lines.push(`- Target calories: ~${child.calorie_target} kcal`);

@@ -13,6 +13,8 @@ module.exports = {
     secret: process.env.JWT_SECRET || 'fallback_secret',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
+  /** Pepper for hashing 6-digit reset OTPs (defaults to JWT_SECRET). */
+  passwordResetOtpPepper: process.env.PASSWORD_RESET_OTP_PEPPER || process.env.JWT_SECRET || 'fallback_secret',
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
   },

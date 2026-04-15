@@ -1,6 +1,6 @@
 'use strict';
 
-const SENSITIVE = new Set(['password', 'newPassword', 'token', 'authorization', 'smtp_pass', 'accessToken', 'refreshToken']);
+const SENSITIVE = new Set(['password', 'newPassword', 'token', 'otp', 'authorization', 'smtp_pass', 'accessToken', 'refreshToken']);
 
 function sanitizeBody(body) {
   if (!body || typeof body !== 'object') return body;

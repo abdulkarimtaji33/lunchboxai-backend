@@ -106,24 +106,41 @@
               "host": ["{{base_url}}"],
               "path": ["api", "auth", "forgot-password"]
             },
-            "description": "Sends reset email if the account exists and has a password (not OAuth-only). Requires SMTP_* in server `.env`. Same generic message whether or not the email exists."
+            "description": "If the account exists and has a local password (not OAuth-only), sends one email with:\n- a **6-digit OTP** (mobile / manual reset), and\n- a **browser reset link** (`FRONTEND_URL/reset-password?token=...`).\n\nRequires SMTP_* in server `.env`. OTP is hashed with `PASSWORD_RESET_OTP_PEPPER` if set, otherwise `JWT_SECRET`.\n\nResponse is always the same generic success message whether or not the email exists (avoid email enumeration). HTTP 503 if SMTP send fails for a real account."
           }
         },
         {
-          "name": "Reset password",
+          "name": "Reset password (link token)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_EMAIL_LINK\",\n  \"newPassword\": \"newpassword123\"\n}"
+              "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_EMAIL_LINK_QUERY\",\n  \"newPassword\": \"newpassword123\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/auth/reset-password",
               "host": ["{{base_url}}"],
               "path": ["api", "auth", "reset-password"]
             },
-            "description": "`token` is the raw query value from `/reset-password?token=...` (1h expiry)."
+            "description": "Web flow: `token` is the raw value from the email link query string `?token=...` (64-char hex, 1h expiry).\n\nJSON body: `token`, `newPassword` (min 6 characters)."
+          }
+        },
+        {
+          "name": "Reset password (email + OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"parent@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "reset-password"]
+            },
+            "description": "Mobile / manual flow: use the **6-digit code** from the forgot-password email.\n\nJSON body: `email`, `otp` (exactly 6 digits), `newPassword` (min 6 characters).\n\nSame `POST /api/auth/reset-password` as link flow; validation accepts either `token` + `newPassword` or `email` + `otp` + `newPassword`. OTP expires in 1h."
           }
         },
         {

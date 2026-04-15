@@ -60,6 +60,15 @@ async function attachRelations(children) {
     ids
   );
 
+  const [nutritionRows] = await pool.execute(
+    `SELECT cng.child_id, ng.goal_key, ng.label, ng.description
+     FROM child_nutrition_goals cng
+     JOIN nutrition_goals ng ON ng.id = cng.nutrition_goal_id AND ng.is_active = 1
+     WHERE cng.child_id IN (${placeholders})
+     ORDER BY ng.label ASC`,
+    ids
+  );
+
   // Index by child_id
   const allergenMap = {};
   for (const r of allergenRows) {
@@ -71,8 +80,15 @@ async function attachRelations(children) {
     if (!ruleMap[r.child_id]) ruleMap[r.child_id] = [];
     ruleMap[r.child_id].push({ id: r.id, name: r.name, description: r.description });
   }
+  const nutritionMap = {};
+  for (const r of nutritionRows) {
+    if (!nutritionMap[r.child_id]) nutritionMap[r.child_id] = [];
+    nutritionMap[r.child_id].push({ goal_key: r.goal_key, label: r.label, description: r.description });
+  }
 
-  return children.map(row => normalizeChild(row, allergenMap[row.id] || [], ruleMap[row.id] || []));
+  return children.map(row =>
+    normalizeChild(row, allergenMap[row.id] || [], ruleMap[row.id] || [], nutritionMap[row.id] || [])
+  );
 }
 
 async function update(id, fields) {
@@ -145,12 +161,12 @@ async function setSchoolRules(childId, schoolRuleIds) {
   }
 }
 
-function normalizeChild(row, allergens, school_rules) {
+function normalizeChild(row, allergens, school_rules, nutrition_goals = []) {
   const { avatar_name, avatar_filename, ...rest } = row;
   const avatar = row.avatar_id
     ? { id: row.avatar_id, name: avatar_name, filename: avatar_filename }
     : null;
-  return { ...rest, allergens, school_rules, avatar };
+  return { ...rest, allergens, school_rules, nutrition_goals, avatar };
 }
 
 module.exports = { create, findByUser, findByIdAndUser, update, deleteById, addAllergen, removeAllergen, getAllergens, setAllergens, setSchoolRules };
