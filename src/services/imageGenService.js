@@ -203,6 +203,7 @@ STRICT REQUIREMENTS:
 ${fillRules}
 ${COVER_AND_LID_RULES}
 ${sessionPreferencesBlock(sessionContext)}
+- Do NOT fill the lid of the lunchbox.
 Style: Bright natural lighting, sharp focus, professional food photography.`;
 
   console.log('Step 2 (edit): Editing lunchbox image with gpt-image-1...');
