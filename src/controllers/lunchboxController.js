@@ -82,15 +82,7 @@ async function createSession(req, res, next) {
       if (!child) return res.status(404).json(formatError('Child not found', 'NOT_FOUND'));
     }
 
-    // Resolve base lunchbox note for AI context
-    let baseLunchboxNote = null;
-    if (base_lunchbox_id) {
-      const bl = await BaseLunchbox.findById(base_lunchbox_id);
-      if (bl) {
-        baseLunchboxNote = `Container: ${bl.name} (${bl.container_type}). ${bl.description || ''}`;
-      }
-    }
-    const effectiveNotes = [notes, baseLunchboxNote].filter(Boolean).join(' | ') || null;
+    const effectiveNotes = notes || null;
 
     // --- BEGIN TRANSACTION ---
     await conn.beginTransaction();
@@ -256,7 +248,7 @@ async function createSessionOpenRouter(req, res, next) {
     uploadedPaths.push(lunchboxFile.path);
     ingredientFiles.forEach(f => uploadedPaths.push(f.path));
 
-    const { child_id, notes, dislikes_override, school_rules_override, prep_time_minutes, nutrition_goal_override, allergen_override_ids, planned_at, base_lunchbox_id: or_base_lunchbox_id } = req.body;
+    const { child_id, notes, dislikes_override, school_rules_override, prep_time_minutes, nutrition_goal_override, allergen_override_ids, planned_at } = req.body;
 
     let allergenIds = [];
     if (allergen_override_ids) {
@@ -269,14 +261,7 @@ async function createSessionOpenRouter(req, res, next) {
       if (!child) return res.status(404).json(formatError('Child not found', 'NOT_FOUND'));
     }
 
-    let orBaseLunchboxNote = null;
-    if (or_base_lunchbox_id) {
-      const bl = await BaseLunchbox.findById(or_base_lunchbox_id);
-      if (bl) {
-        orBaseLunchboxNote = `Container: ${bl.name} (${bl.container_type}). ${bl.description || ''}`;
-      }
-    }
-    const orEffectiveNotes = [notes, orBaseLunchboxNote].filter(Boolean).join(' | ') || null;
+    const orEffectiveNotes = notes || null;
 
     await conn.beginTransaction();
     sessionId = await LunchBox.createSession(conn, {
