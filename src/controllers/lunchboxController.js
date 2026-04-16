@@ -5,7 +5,7 @@ const LunchBox     = require('../models/LunchBox');
 const Child        = require('../models/Child');
 const ChildLunchbox  = require('../models/ChildLunchbox');
 const BaseLunchbox   = require('../models/BaseLunchbox');
-const { analyzeLunchbox, identifyIngredients, buildSessionAiContext, suggestCookingIngredients } = require('../services/aiService');
+const { analyzeLunchbox, identifyIngredients, buildSessionAiContext } = require('../services/aiService');
 const { generateFilledLunchbox, generateFilledLunchboxEdit, generateFilledLunchboxOpenRouter } = require('../services/imageGenService');
 const { deleteFiles, saveGeneratedLunchboxImage, buildPublicFileUrl } = require('../services/imageService');
 const { formatResponse, formatError, paginate } = require('../utils/helpers');
@@ -134,12 +134,10 @@ async function createSession(req, res, next) {
 
     // Step 2: Image generation (use_image_edit=true uses the actual lunchbox photo as base)
     const useEdit = use_image_edit === 'true' || use_image_edit === true;
-    const { filledImageDataUrl, filledImageB64, foodItems, attemptSummaries, generatedAnalysis } =
+    const { filledImageDataUrl, filledImageB64, foodItems, cookingIngredients, attemptSummaries, generatedAnalysis } =
       useEdit
         ? await generateFilledLunchboxEdit({ lunchboxImagePath: lunchboxFile.path, compartmentCount, identifiedIngredients, sessionContext })
         : await generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext });
-
-    const cookingIngredients = await suggestCookingIngredients(foodItems, sessionContext);
 
     const processingMs = Date.now() - startTime;
 
@@ -291,10 +289,8 @@ async function createSessionOpenRouter(req, res, next) {
 
     if (identifiedIngredients) console.log('Ingredients identified:', identifiedIngredients);
 
-    const { filledImageDataUrl, filledImageB64, foodItems, attemptSummaries, generatedAnalysis } =
+    const { filledImageDataUrl, filledImageB64, foodItems, cookingIngredients, attemptSummaries, generatedAnalysis } =
       await generateFilledLunchboxOpenRouter({ lunchboxImagePath: lunchboxFile.path, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext });
-
-    const cookingIngredients = await suggestCookingIngredients(foodItems, sessionContext);
 
     const processingMs = Date.now() - startTime;
 

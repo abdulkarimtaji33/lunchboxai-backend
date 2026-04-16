@@ -39,9 +39,10 @@ function detectAspectRatio(width, height) {
 }
 
 const VERIFICATION_PROMPT =
-  'Analyze this generated lunchbox image and return ONLY valid JSON in this schema: ' +
-  '{"compartment_count":number,"shape":"rectangular|square|round|other","orientation":"landscape|portrait|square","food_items":["food1","food2"]}. ' +
-  'List every food item you can see placed in the lunchbox in food_items.';
+  'Analyze this lunchbox image and return ONLY valid JSON in this exact schema: ' +
+  '{"compartment_count":number,"shape":"rectangular|square|round|other","orientation":"landscape|portrait|square","food_items":["food1","food2"],"cooking_ingredients":["item1","item2"]}. ' +
+  'food_items: every food you see placed in the lunchbox. ' +
+  'cooking_ingredients: the specific grocery/supermarket items a parent needs to buy to make those foods (e.g. "baby carrots", "cheddar cheese", "whole wheat bread"). Each entry must be a real purchasable product — never a vague phrase like "dip ingredients".';
 
 function sessionPreferencesBlock(sessionContext) {
   const t = sessionContext && String(sessionContext).trim();
@@ -118,7 +119,7 @@ Style: Clean white background, bright natural lighting, sharp focus, appetizing 
             { type: 'image_url', image_url: { url: candidateUrl } },
           ],
         }],
-        max_tokens: 300,
+        max_tokens: 500,
       });
       const raw   = (verificationResponse.choices[0].message.content || '').trim();
       const match = raw.match(/\{[\s\S]*\}/);
@@ -142,7 +143,7 @@ Style: Clean white background, bright natural lighting, sharp focus, appetizing 
     console.log('Attempt summary:', summary);
 
     if (!bestResult || score < bestResult.score) {
-      bestResult = { url: candidateUrl, b64: imageResponse.data[0].b64_json || null, score, generatedAnalysis, foodItems: generatedAnalysis.food_items || [] };
+      bestResult = { url: candidateUrl, b64: imageResponse.data[0].b64_json || null, score, generatedAnalysis, foodItems: generatedAnalysis.food_items || [], cookingIngredients: generatedAnalysis.cooking_ingredients || [] };
     }
 
     if (
@@ -157,11 +158,12 @@ Style: Clean white background, bright natural lighting, sharp focus, appetizing 
 
   console.log('Food items in generated lunchbox:', bestResult.foodItems);
   return {
-    filledImageDataUrl: bestResult.url,
-    filledImageB64:     bestResult.b64,
-    foodItems:          bestResult.foodItems,
+    filledImageDataUrl:  bestResult.url,
+    filledImageB64:      bestResult.b64,
+    foodItems:           bestResult.foodItems,
+    cookingIngredients:  bestResult.cookingIngredients,
     attemptSummaries,
-    generatedAnalysis:  bestResult.generatedAnalysis,
+    generatedAnalysis:   bestResult.generatedAnalysis,
   };
 }
 
@@ -241,11 +243,11 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
     filledImageDataUrl = candidateB64;
   }
 
-  // Verify generated image + extract food items
-  let generatedAnalysis = { compartment_count: -1, shape: 'unknown', orientation: 'unknown', food_items: [] };
+  // Verify generated image + extract food items and cooking ingredients
+  let generatedAnalysis = { compartment_count: -1, shape: 'unknown', orientation: 'unknown', food_items: [], cooking_ingredients: [] };
   try {
     const verificationResponse = await openrouter.chat.completions.create({
-      model:    'openai/gpt-4o',
+      model:    'openai/gpt-5-nano',
       messages: [{
         role:    'user',
         content: [
@@ -253,7 +255,6 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
           { type: 'image_url', image_url: { url: filledImageDataUrl } },
         ],
       }],
-      max_tokens: 300,
     });
     const raw   = (verificationResponse.choices[0].message.content || '').trim();
     const match = raw.match(/\{[\s\S]*\}/);
@@ -262,13 +263,16 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
     console.log('Edit verification failed:', err.message);
   }
 
-  const foodItems = generatedAnalysis.food_items || [];
+  const foodItems          = generatedAnalysis.food_items          || [];
+  const cookingIngredients = generatedAnalysis.cooking_ingredients || [];
   console.log('Edit generation complete. Food items:', foodItems);
+  console.log('Edit generation complete. Food items:', cookingIngredients);
 
   return {
     filledImageDataUrl,
     filledImageB64:    imageResponse.data[0].b64_json || null,
     foodItems,
+    cookingIngredients,
     attemptSummaries:  [{ attempt: 1, ...generatedAnalysis, score: 0 }],
     generatedAnalysis,
   };
@@ -365,7 +369,7 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
             { type: 'image_url', image_url: { url: filledImageDataUrl } },
           ],
         }],
-        max_tokens: 300,
+        max_tokens: 500,
       });
       const raw   = (verificationResponse.choices[0].message.content || '').trim();
       const match = raw.match(/\{[\s\S]*\}/);
@@ -375,13 +379,15 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
     }
   }
 
-  const foodItems = generatedAnalysis.food_items || [];
+  const foodItems          = generatedAnalysis.food_items          || [];
+  const cookingIngredients = generatedAnalysis.cooking_ingredients || [];
   console.log('OpenRouter generation complete. Food items:', foodItems);
 
   return {
     filledImageDataUrl,
     filledImageB64,
     foodItems,
+    cookingIngredients,
     attemptSummaries: [{ attempt: 1, ...generatedAnalysis, score: 0 }],
     generatedAnalysis,
   };
