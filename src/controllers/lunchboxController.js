@@ -144,7 +144,7 @@ async function createSession(req, res, next) {
     const useEdit = use_image_edit === 'true' || use_image_edit === true;
     const { filledImageDataUrl, filledImageB64, foodItems, attemptSummaries, generatedAnalysis } =
       useEdit
-        ? await generateFilledLunchboxEdit({ lunchboxImagePath: lunchboxFile.path, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext })
+        ? await generateFilledLunchboxEdit({ lunchboxImagePath: lunchboxFile.path, compartmentCount, identifiedIngredients, sessionContext })
         : await generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext });
 
     const cookingIngredients = await suggestCookingIngredients(foodItems, sessionContext);

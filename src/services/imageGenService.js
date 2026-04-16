@@ -166,7 +166,7 @@ Style: Clean white background, bright natural lighting, sharp focus, appetizing 
 }
 
 // --- Image EDIT flow: uses the actual lunchbox photo as base image ---
-async function generateFilledLunchboxEdit({ lunchboxImagePath, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext }) {
+async function generateFilledLunchboxEdit({ lunchboxImagePath, compartmentCount, identifiedIngredients, sessionContext }) {
   const ingredientLine = identifiedIngredients
     ? `- AVAILABLE INGREDIENTS (that must be used): ${identifiedIngredients}`
     : '- You decide what foods to add — varied, balanced, kid-friendly with ONE main dish';
@@ -195,15 +195,21 @@ ${ingredientLine}
 - Do NOT add or remove any compartments. Do NOT change the shape of the lunchbox.`;
 
   const editPrompt =
-    `This is a photo of an empty lunchbox matching this description: ${lunchboxDescription}
+    `This is a photo of a lunchbox that is open. It has a bottom food tray and a lid. Fill ONLY the bottom food tray with food.
 
-Fill it with food items.
+HOW TO IDENTIFY THE BOTTOM TRAY vs THE LID:
+- The bottom tray is the darker-colored or deeper half — it is the part that sits on the table and holds food when packed.
+- The lid is the lighter-colored or shallower half connected by a hinge. Even if the lid has its own molded compartments or wells, it is still the lid — do NOT put food in it.
+- Look for the hinge connecting the two halves. The half that the hinge folds away from is the lid; the half that stays flat on the table is the bottom tray.
 
 STRICT REQUIREMENTS:
 ${fillRules}
-${COVER_AND_LID_RULES}
+LID HANDLING:
+- The lid half must appear empty and closed-looking or faded out — no food on it, no suggestion of food on it.
+- Place food ONLY in the bottom tray's wells.
+- Do NOT change the compartment layout, shape, or color of the bottom tray.
+- Do NOT add or remove compartments from the bottom tray.
 ${sessionPreferencesBlock(sessionContext)}
-- Do NOT fill the lid of the lunchbox.
 Style: Bright natural lighting, sharp focus, professional food photography.`;
 
   console.log('Step 2 (edit): Editing lunchbox image with gpt-image-1...');
