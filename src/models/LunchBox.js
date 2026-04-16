@@ -51,18 +51,22 @@ async function updateStatus(conn, sessionId, status) {
 }
 
 async function attachResult(conn, sessionId, {
-  aiTextResponse, suggestedItems, nutritionNotes, arrangementDesc,
+  aiTextResponse, suggestedItems, cookingIngredients, nutritionNotes, arrangementDesc,
   funNote, generatedImagePath, aiModel, tokensUsed, processingMs,
 }) {
+  const cookingJson = cookingIngredients && cookingIngredients.length
+    ? JSON.stringify(cookingIngredients)
+    : null;
   await conn.execute(
     `INSERT INTO lunchbox_results
-       (session_id, ai_text_response, suggested_items, nutrition_notes, arrangement_desc,
+       (session_id, ai_text_response, suggested_items, cooking_ingredients, nutrition_notes, arrangement_desc,
         fun_note, generated_image_path, ai_model, tokens_used, processing_ms)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       sessionId,
       aiTextResponse,
       suggestedItems ? JSON.stringify(suggestedItems) : null,
+      cookingJson,
       nutritionNotes    || null,
       arrangementDesc   || null,
       funNote           || null,
@@ -123,7 +127,7 @@ async function findByIdAndUser(sessionId, userId) {
   );
 
   const [results] = await pool.execute(
-    `SELECT id, ai_text_response, suggested_items, nutrition_notes, arrangement_desc,
+    `SELECT id, ai_text_response, suggested_items, cooking_ingredients, nutrition_notes, arrangement_desc,
             fun_note, generated_image_path, ai_model, tokens_used, processing_ms, created_at
      FROM lunchbox_results WHERE session_id = ?`,
     [sessionId]
@@ -203,6 +207,12 @@ function normalizeResult(row) {
   if (row.suggested_items && typeof row.suggested_items === 'string') {
     try { row.suggested_items = JSON.parse(row.suggested_items); } catch { row.suggested_items = null; }
   }
+  if (row.cooking_ingredients != null) {
+    if (typeof row.cooking_ingredients === 'string') {
+      try { row.cooking_ingredients = JSON.parse(row.cooking_ingredients); } catch { row.cooking_ingredients = null; }
+    }
+    if (!Array.isArray(row.cooking_ingredients)) row.cooking_ingredients = null;
+  }
   if (row.generated_image_path) {
     row.generated_image_url = buildPublicFileUrl(row.generated_image_path);
   }
@@ -219,8 +229,19 @@ async function setSessionFlag(sessionId, userId, flag, value) {
   return result.affectedRows > 0;
 }
 
+async function setSessionFeedback(sessionId, userId, { rating, comment }) {
+  const [result] = await pool.execute(
+    `UPDATE lunchbox_sessions
+     SET feedback_rating = ?, feedback_comment = ?
+     WHERE id = ? AND user_id = ?`,
+    [rating, comment, sessionId, userId]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   createSession, insertIngredientImages, insertSessionAllergenOverrides,
   updateStatus, attachResult, findByUser, findByIdAndUser,
   getFilePaths, resolveAllergens, deleteById, setPlanDate, setSessionFlag,
+  setSessionFeedback,
 };

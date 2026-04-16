@@ -5,7 +5,7 @@ const LunchBox     = require('../models/LunchBox');
 const Child        = require('../models/Child');
 const ChildLunchbox  = require('../models/ChildLunchbox');
 const BaseLunchbox   = require('../models/BaseLunchbox');
-const { analyzeLunchbox, identifyIngredients, buildSessionAiContext } = require('../services/aiService');
+const { analyzeLunchbox, identifyIngredients, buildSessionAiContext, suggestCookingIngredients } = require('../services/aiService');
 const { generateFilledLunchbox, generateFilledLunchboxEdit, generateFilledLunchboxOpenRouter } = require('../services/imageGenService');
 const { deleteFiles, saveGeneratedLunchboxImage, buildPublicFileUrl } = require('../services/imageService');
 const { formatResponse, formatError, paginate } = require('../utils/helpers');
@@ -147,6 +147,8 @@ async function createSession(req, res, next) {
         ? await generateFilledLunchboxEdit({ lunchboxImagePath: lunchboxFile.path, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext })
         : await generateFilledLunchbox({ lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext });
 
+    const cookingIngredients = await suggestCookingIngredients(foodItems, sessionContext);
+
     const processingMs = Date.now() - startTime;
 
     const generatedImagePath = await saveGeneratedLunchboxImage({
@@ -157,14 +159,15 @@ async function createSession(req, res, next) {
     // Step 3: Persist result
     await conn.beginTransaction();
     await LunchBox.attachResult(conn, sessionId, {
-      aiTextResponse:    lunchboxDescription,
-      suggestedItems:    foodItems,
-      nutritionNotes:    null,
-      arrangementDesc:   lunchboxDescription,
-      funNote:           null,
+      aiTextResponse:      lunchboxDescription,
+      suggestedItems:      foodItems,
+      cookingIngredients,
+      nutritionNotes:      null,
+      arrangementDesc:     lunchboxDescription,
+      funNote:             null,
       generatedImagePath,
-      aiModel:           'gpt-4o + gpt-image-1',
-      tokensUsed:        null,
+      aiModel:             'gpt-4o + gpt-image-1',
+      tokensUsed:          null,
       processingMs,
     });
     await LunchBox.updateStatus(conn, sessionId, 'completed');
@@ -176,6 +179,7 @@ async function createSession(req, res, next) {
       session,
       filledLunchboxUrl: buildPublicFileUrl(generatedImagePath),
       foodItems,
+      cookingIngredients,
       lunchboxDescription,
       compartmentCount,
       detectedShape:       shape,
@@ -305,6 +309,8 @@ async function createSessionOpenRouter(req, res, next) {
     const { filledImageDataUrl, filledImageB64, foodItems, attemptSummaries, generatedAnalysis } =
       await generateFilledLunchboxOpenRouter({ lunchboxImagePath: lunchboxFile.path, lunchboxDescription, compartmentCount, shape, orientation, identifiedIngredients, sessionContext });
 
+    const cookingIngredients = await suggestCookingIngredients(foodItems, sessionContext);
+
     const processingMs = Date.now() - startTime;
 
     const generatedImagePath = await saveGeneratedLunchboxImage({
@@ -314,7 +320,7 @@ async function createSessionOpenRouter(req, res, next) {
 
     await conn.beginTransaction();
     await LunchBox.attachResult(conn, sessionId, {
-      aiTextResponse: lunchboxDescription, suggestedItems: foodItems, nutritionNotes: null,
+      aiTextResponse: lunchboxDescription, suggestedItems: foodItems, cookingIngredients, nutritionNotes: null,
       arrangementDesc: lunchboxDescription, funNote: null,
       generatedImagePath, aiModel: 'gpt-4o + gpt-5-image-mini (openrouter)', tokensUsed: null, processingMs,
     });
@@ -322,7 +328,7 @@ async function createSessionOpenRouter(req, res, next) {
     await conn.commit();
 
     const session = await LunchBox.findByIdAndUser(sessionId, req.user.id);
-    res.status(201).json(formatResponse({ session, filledLunchboxUrl: buildPublicFileUrl(generatedImagePath), foodItems, lunchboxDescription, compartmentCount, detectedShape: shape, detectedOrientation: orientation, generatedImageAnalysis: generatedAnalysis, generationAttempts: attemptSummaries, processingMs }));
+    res.status(201).json(formatResponse({ session, filledLunchboxUrl: buildPublicFileUrl(generatedImagePath), foodItems, cookingIngredients, lunchboxDescription, compartmentCount, detectedShape: shape, detectedOrientation: orientation, generatedImageAnalysis: generatedAnalysis, generationAttempts: attemptSummaries, processingMs }));
 
   } catch (err) {
     try { await conn.rollback(); } catch {}
@@ -365,4 +371,47 @@ async function setFlag(req, res, next) {
   }
 }
 
-module.exports = { createSession, createSessionOpenRouter, getHistory, getSession, deleteSession, planSession, setFlag };
+async function submitFeedback(req, res, next) {
+  try {
+    const { feedback_rating, feedback_comment } = req.body;
+    let ratingNum = null;
+    if (feedback_rating != null && feedback_rating !== '') {
+      ratingNum = Number(feedback_rating);
+      if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+        return res.status(400).json(formatError('feedback_rating must be an integer from 1 to 5', 'VALIDATION_ERROR'));
+      }
+    }
+    const comment = feedback_comment != null ? String(feedback_comment).trim() : '';
+    if (ratingNum == null && !comment) {
+      return res.status(400).json(formatError('Provide a star rating and/or written feedback', 'VALIDATION_ERROR'));
+    }
+
+    const session = await LunchBox.findByIdAndUser(req.params.id, req.user.id);
+    if (!session) return res.status(404).json(formatError('Session not found', 'NOT_FOUND'));
+    if (session.status !== 'completed') {
+      return res.status(400).json(formatError('Feedback is only available for completed lunchboxes', 'VALIDATION_ERROR'));
+    }
+
+    const ok = await LunchBox.setSessionFeedback(req.params.id, req.user.id, {
+      rating:  ratingNum,
+      comment: comment || null,
+    });
+    if (!ok) return res.status(404).json(formatError('Session not found', 'NOT_FOUND'));
+
+    const updated = await LunchBox.findByIdAndUser(req.params.id, req.user.id);
+    res.json(formatResponse({ session: updated }));
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  createSession,
+  createSessionOpenRouter,
+  getHistory,
+  getSession,
+  deleteSession,
+  planSession,
+  setFlag,
+  submitFeedback,
+};

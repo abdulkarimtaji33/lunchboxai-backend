@@ -214,4 +214,58 @@ async function analyzeLunchbox({ lunchboxImagePath, child, allergens = [], sessi
   return { lunchboxDescription, compartmentCount, shape, orientation };
 }
 
-module.exports = { analyzeLunchbox, identifyIngredients, buildSessionAiContext };
+function normalizeFoodItemNames(foodItems) {
+  if (!Array.isArray(foodItems)) return [];
+  return foodItems
+    .map((item) => {
+      if (typeof item === 'string') return item.trim();
+      if (item && typeof item === 'object' && item.name) return String(item.name).trim();
+      return String(item || '').trim();
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Shopping / prep ingredients to make the suggested lunchbox foods, respecting session context (allergens, etc.).
+ */
+async function suggestCookingIngredients(foodItems, sessionContext) {
+  const names = normalizeFoodItemNames(foodItems);
+  if (!names.length) return [];
+
+  const contextBlock = sessionContext && String(sessionContext).trim()
+    ? `Mandatory constraints from the parent/child profile:\n${sessionContext}\n\n`
+    : '';
+
+  const prompt = `${contextBlock}Planned lunchbox items (already selected): ${names.join('; ')}.
+
+Produce a shopping-and-prep list: items you would buy or measure out in the kitchen to create those foods, in their usual retail or pantry form, or as the parts needed to cook or mix them. The list must not restate the same foods as they would appear packed and ready in the lunchbox.
+
+If an entry is a single simple product, use the form you would purchase or take from storage before any lunchbox-specific cutting or portioning. If an entry is made from several components, list those components rather than the finished dish as one line.
+
+Return only this JSON shape with no other text: {"ingredients":["..."]}. Deduplicate entries. Follow every constraint stated above in this message.`;
+
+  const response = await openai.chat.completions.create({
+    model:       'openai/gpt-4o',
+    messages:    [{ role: 'user', content: prompt }],
+    max_tokens:  600,
+    temperature: 0.1,
+  });
+
+  const raw = (response.choices[0].message.content || '').trim();
+  try {
+    const match = raw.match(/\{[\s\S]*\}/);
+    const parsed = match ? JSON.parse(match[0]) : JSON.parse(raw);
+    const list = Array.isArray(parsed.ingredients) ? parsed.ingredients : [];
+    return list.map((x) => String(x).trim()).filter(Boolean);
+  } catch (err) {
+    console.log('suggestCookingIngredients parse error:', err.message);
+    return [];
+  }
+}
+
+module.exports = {
+  analyzeLunchbox,
+  identifyIngredients,
+  buildSessionAiContext,
+  suggestCookingIngredients,
+};
