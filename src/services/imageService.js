@@ -23,12 +23,8 @@ function buildPublicFileUrl(relativePath) {
   return `${base}/${rel}`;
 }
 
-/**
- * Persist a generated lunchbox image to UPLOAD_DIR. Prefer base64 from the API;
- * falls back to data URL or remote http(s) URL.
- * @returns {string} Relative path suitable for DB (e.g. uploads/generated-....png)
- */
-async function saveGeneratedLunchboxImage({ dataUrl, base64 }) {
+/** Decode AI output to PNG/JPEG bytes (before optional background removal). */
+function decodeGeneratedImageBuffer({ dataUrl, base64 }) {
   let buffer;
   if (base64 && typeof base64 === 'string') {
     buffer = Buffer.from(base64, 'base64');
@@ -37,10 +33,33 @@ async function saveGeneratedLunchboxImage({ dataUrl, base64 }) {
       const m = dataUrl.match(/^data:image\/\w+;base64,(.+)$/);
       if (m) buffer = Buffer.from(m[1], 'base64');
     } else if (/^https?:\/\//i.test(dataUrl)) {
-      const res = await fetch(dataUrl);
-      if (!res.ok) throw new Error(`Failed to fetch generated image: ${res.status}`);
-      buffer = Buffer.from(await res.arrayBuffer());
+      return null;
     }
+  }
+  if (!buffer || !buffer.length) return null;
+  return buffer;
+}
+
+async function decodeGeneratedImageBufferAsync({ dataUrl, base64 }) {
+  if (Buffer.isBuffer(dataUrl)) return dataUrl;
+  const sync = decodeGeneratedImageBuffer({ dataUrl, base64 });
+  if (sync) return sync;
+  if (dataUrl && typeof dataUrl === 'string' && /^https?:\/\//i.test(dataUrl)) {
+    const res = await fetch(dataUrl);
+    if (!res.ok) throw new Error(`Failed to fetch generated image: ${res.status}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+  return null;
+}
+
+/**
+ * Persist a generated lunchbox image to UPLOAD_DIR. Pass buffer, or base64 / data URL / http URL.
+ * @returns {string} Relative path suitable for DB (e.g. uploads/generated-....png)
+ */
+async function saveGeneratedLunchboxImage({ dataUrl, base64, buffer: existingBuffer }) {
+  let buffer = Buffer.isBuffer(existingBuffer) && existingBuffer.length ? existingBuffer : null;
+  if (!buffer) {
+    buffer = await decodeGeneratedImageBufferAsync({ dataUrl, base64 });
   }
   if (!buffer || !buffer.length) throw new Error('No image data to save');
 
@@ -108,5 +127,7 @@ module.exports = {
   deleteStoredFile,
   deleteFiles,
   buildPublicFileUrl,
+  decodeGeneratedImageBuffer,
+  decodeGeneratedImageBufferAsync,
   saveGeneratedLunchboxImage,
 };

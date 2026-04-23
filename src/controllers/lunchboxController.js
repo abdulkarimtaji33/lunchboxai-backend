@@ -8,8 +8,27 @@ const ChildLunchbox  = require('../models/ChildLunchbox');
 const BaseLunchbox   = require('../models/BaseLunchbox');
 const { analyzeLunchbox, identifyIngredients, buildSessionAiContext } = require('../services/aiService');
 const { generateFilledLunchbox, generateFilledLunchboxEdit, generateFilledLunchboxOpenRouter } = require('../services/imageGenService');
-const { deleteFiles, saveGeneratedLunchboxImage, buildPublicFileUrl } = require('../services/imageService');
+const { deleteFiles, saveGeneratedLunchboxImage, buildPublicFileUrl, decodeGeneratedImageBufferAsync } = require('../services/imageService');
+const { applyLocalBackgroundRemoval } = require('../services/backgroundRemovalService');
 const { formatResponse, formatError, paginate } = require('../utils/helpers');
+
+function wantsRemoveBackground(body) {
+  const v = body?.remove_background;
+  if (v === 'false' || v === false || v === '0') return false;
+  return true;
+}
+
+async function persistGeneratedLunchboxImage({ dataUrl, base64, body }) {
+  const removeBg = wantsRemoveBackground(body);
+  console.warn('[lunchbox-image] persist begin', { remove_background: removeBg });
+  let buffer = await decodeGeneratedImageBufferAsync({ dataUrl, base64 });
+  if (!buffer?.length) throw new Error('No image data to save');
+  console.warn('[lunchbox-image] decoded', { bytes: buffer.length });
+  buffer = await applyLocalBackgroundRemoval(buffer, removeBg);
+  const stored = await saveGeneratedLunchboxImage({ buffer });
+  console.warn('[lunchbox-image] saved', { path: stored, bytes: buffer.length });
+  return stored;
+}
 
 async function createSession(req, res, next) {
   const uploadedPaths = [];
@@ -151,9 +170,10 @@ async function createSession(req, res, next) {
 
     const processingMs = Date.now() - startTime;
 
-    const generatedImagePath = await saveGeneratedLunchboxImage({
+    const generatedImagePath = await persistGeneratedLunchboxImage({
       dataUrl: filledImageDataUrl,
       base64: filledImageB64,
+      body: req.body,
     });
 
     // Step 3: Persist result
@@ -318,9 +338,10 @@ async function createSessionOpenRouter(req, res, next) {
 
     const processingMs = Date.now() - startTime;
 
-    const generatedImagePath = await saveGeneratedLunchboxImage({
+    const generatedImagePath = await persistGeneratedLunchboxImage({
       dataUrl: filledImageDataUrl,
       base64: filledImageB64,
+      body: req.body,
     });
 
     await conn.beginTransaction();

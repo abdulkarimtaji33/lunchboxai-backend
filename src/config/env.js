@@ -77,4 +77,8 @@ module.exports = {
     0,
     parseInt(process.env.DEFAULT_FREE_GENERATION_CREDITS ?? '5', 10) || 0
   ),
+  /** Set true to skip @imgly matting (avoids native/GLib crashes on some Windows setups). */
+  localBackgroundRemovalDisabled:
+    process.env.DISABLE_LOCAL_BACKGROUND_REMOVAL === '1' ||
+    process.env.DISABLE_LOCAL_BACKGROUND_REMOVAL === 'true',
 };

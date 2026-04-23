@@ -194,7 +194,9 @@ ${ingredientLine}
 - Use exactly ${compartmentCount} foods total (one per compartment)
 - Each food should look fresh, appetizing, and realistic
 - Do NOT add extra containers, trays, or duplicate lunchboxes
-- Do NOT add or remove any compartments. Do NOT change the shape of the lunchbox.`;
+- Do NOT add or remove any compartments. Do NOT change the shape of the lunchbox.
+- Remove the background of the image.
+`;
 
   const editPrompt =
     `This is a photo of a lunchbox that is open. It has a bottom food tray and a lid. Fill ONLY the bottom food tray with food.
