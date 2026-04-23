@@ -58,4 +58,23 @@ module.exports = {
     pass: process.env.SMTP_PASS || '',
     from: process.env.EMAIL_FROM || '',
   },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    priceStarter: process.env.STRIPE_PRICE_STARTER || '',
+    priceGrowth: process.env.STRIPE_PRICE_GROWTH || '',
+    pricePro: process.env.STRIPE_PRICE_PRO || '',
+  },
+  /** Comma-separated emails promoted to is_admin on every server start (idempotent). */
+  adminBootstrapEmails: (process.env.ADMIN_BOOTSTRAP_EMAILS || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
+  /** If set with ADMIN_BOOTSTRAP_PASSWORD (min 8 chars), creates local admin or grants is_admin. */
+  adminBootstrapEmail: (process.env.ADMIN_BOOTSTRAP_EMAIL || '').trim(),
+  adminBootstrapPassword: (process.env.ADMIN_BOOTSTRAP_PASSWORD || '').trim(),
+  defaultFreeGenerationCredits: Math.max(
+    0,
+    parseInt(process.env.DEFAULT_FREE_GENERATION_CREDITS ?? '5', 10) || 0
+  ),
 };

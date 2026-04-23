@@ -109,6 +109,35 @@ async function findByUser(userId, { page, limit, offset, childId }) {
   return { rows: rows.map(normalizeSession), total, completed_count: Number(completed_count) || 0, page, limit };
 }
 
+async function findByIdAsAdmin(sessionId) {
+  const [rows] = await pool.execute(
+    `SELECT s.*, c.name AS child_name
+     FROM lunchbox_sessions s
+     LEFT JOIN children c ON c.id = s.child_id
+     WHERE s.id = ?`,
+    [sessionId]
+  );
+  if (!rows[0]) return null;
+
+  const session = rows[0];
+  const [ingredients] = await pool.execute(
+    'SELECT id, image_path, label FROM ingredient_images WHERE session_id = ?',
+    [sessionId]
+  );
+  const [results] = await pool.execute(
+    `SELECT id, ai_text_response, suggested_items, cooking_ingredients, nutrition_notes, arrangement_desc,
+            fun_note, generated_image_path, ai_model, tokens_used, processing_ms, created_at
+     FROM lunchbox_results WHERE session_id = ?`,
+    [sessionId]
+  );
+
+  return {
+    ...normalizeSession(session),
+    ingredients,
+    result: results[0] ? normalizeResult(results[0]) : null,
+  };
+}
+
 async function findByIdAndUser(sessionId, userId) {
   const [rows] = await pool.execute(
     `SELECT s.*, c.name AS child_name
@@ -241,7 +270,7 @@ async function setSessionFeedback(sessionId, userId, { rating, comment }) {
 
 module.exports = {
   createSession, insertIngredientImages, insertSessionAllergenOverrides,
-  updateStatus, attachResult, findByUser, findByIdAndUser,
+  updateStatus, attachResult, findByUser, findByIdAndUser, findByIdAsAdmin,
   getFilePaths, resolveAllergens, deleteById, setPlanDate, setSessionFlag,
   setSessionFeedback,
 };

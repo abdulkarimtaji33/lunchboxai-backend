@@ -3,6 +3,7 @@
 const pool         = require('../config/database');
 const LunchBox     = require('../models/LunchBox');
 const Child        = require('../models/Child');
+const User         = require('../models/User');
 const ChildLunchbox  = require('../models/ChildLunchbox');
 const BaseLunchbox   = require('../models/BaseLunchbox');
 const { analyzeLunchbox, identifyIngredients, buildSessionAiContext } = require('../services/aiService');
@@ -84,6 +85,15 @@ async function createSession(req, res, next) {
 
     const effectiveNotes = notes || null;
 
+    const billingUser = await User.findById(req.user.id);
+    if (!billingUser) return res.status(401).json(formatError('User not found', 'NOT_FOUND'));
+    if (!billingUser.is_admin && (!billingUser.generation_credits || billingUser.generation_credits < 1)) {
+      return res.status(402).json(formatError(
+        'No generation credits left. Buy a pack under Billing.',
+        'INSUFFICIENT_CREDITS'
+      ));
+    }
+
     // --- BEGIN TRANSACTION ---
     await conn.beginTransaction();
 
@@ -162,6 +172,11 @@ async function createSession(req, res, next) {
     });
     await LunchBox.updateStatus(conn, sessionId, 'completed');
     await conn.commit();
+
+    if (!billingUser.is_admin) {
+      const consumed = await User.consumeOneCredit(req.user.id);
+      if (!consumed) console.warn('consumeOneCredit: no row updated', req.user.id);
+    }
 
     const session = await LunchBox.findByIdAndUser(sessionId, req.user.id);
 
@@ -261,6 +276,15 @@ async function createSessionOpenRouter(req, res, next) {
 
     const orEffectiveNotes = notes || null;
 
+    const billingUser = await User.findById(req.user.id);
+    if (!billingUser) return res.status(401).json(formatError('User not found', 'NOT_FOUND'));
+    if (!billingUser.is_admin && (!billingUser.generation_credits || billingUser.generation_credits < 1)) {
+      return res.status(402).json(formatError(
+        'No generation credits left. Buy a pack under Billing.',
+        'INSUFFICIENT_CREDITS'
+      ));
+    }
+
     await conn.beginTransaction();
     sessionId = await LunchBox.createSession(conn, {
       userId: req.user.id, childId: child?.id || null, lunchboxImagePath: lunchboxFile.path,
@@ -307,6 +331,11 @@ async function createSessionOpenRouter(req, res, next) {
     });
     await LunchBox.updateStatus(conn, sessionId, 'completed');
     await conn.commit();
+
+    if (!billingUser.is_admin) {
+      const consumed = await User.consumeOneCredit(req.user.id);
+      if (!consumed) console.warn('consumeOneCredit: no row updated', req.user.id);
+    }
 
     const session = await LunchBox.findByIdAndUser(sessionId, req.user.id);
     res.status(201).json(formatResponse({ session, filledLunchboxUrl: buildPublicFileUrl(generatedImagePath), foodItems, cookingIngredients, lunchboxDescription, compartmentCount, detectedShape: shape, detectedOrientation: orientation, generatedImageAnalysis: generatedAnalysis, generationAttempts: attemptSummaries, processingMs }));

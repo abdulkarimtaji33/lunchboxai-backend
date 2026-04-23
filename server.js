@@ -19,13 +19,21 @@ const avatarRoutes       = require('./src/routes/avatarRoutes');
 const schoolRuleRoutes   = require('./src/routes/schoolRuleRoutes');
 const lunchboxRoutes     = require('./src/routes/lunchboxRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
+const billingRoutes        = require('./src/routes/billingRoutes');
+const adminRoutes          = require('./src/routes/adminRoutes');
 const errorHandler       = require('./src/middleware/errorHandler');
 const { httpLogger, logRequestBody } = require('./src/middleware/httpLogger');
 
 const app = express();
+const billingWebhookController = require('./src/controllers/billingWebhookController');
 
 // --- Core middleware ---
 app.use(cors());
+app.post(
+  '/api/billing/webhook',
+  express.raw({ type: 'application/json' }),
+  billingWebhookController.handleWebhook
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(httpLogger);
@@ -54,6 +62,8 @@ app.use('/api/school-rules',     schoolRuleRoutes);
 app.use('/api/lunchbox',         lunchboxRoutes);
 app.use('/api/base-lunchboxes', require('./src/routes/baseLunchboxRoutes'));
 app.use('/api/notifications',    notificationRoutes);
+app.use('/api/billing',          billingRoutes);
+app.use('/api/admin',            adminRoutes);
 
 // --- 404 for unknown routes ---
 app.use((req, res) => {
@@ -66,6 +76,14 @@ app.use(errorHandler);
 // --- Start ---
 async function start() {
   await testConnection();
+  const User = require('./src/models/User');
+  try {
+    await User.bootstrapAdminAccount();
+    await User.bootstrapAdmins();
+  } catch (e) {
+    console.error('[admin-bootstrap] failed (run migrations / check users table):', e.message);
+    throw e;
+  }
   app.listen(env.port, '0.0.0.0', () => {
     console.log(`LunchBox AI server listening on http://0.0.0.0:${env.port}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

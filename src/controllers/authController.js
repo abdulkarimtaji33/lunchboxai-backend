@@ -38,8 +38,9 @@ async function register(req, res, next) {
 async function login(req, res, next) {
   try {
     const { email, password } = req.body;
+    const emailNorm = String(email || '').trim();
 
-    const user = await User.findByEmail(email);
+    const user = await User.findByEmailInsensitive(emailNorm);
     if (!user || !user.password_hash) {
       return res.status(401).json(formatError('Invalid email or password', 'INVALID_CREDENTIALS'));
     }

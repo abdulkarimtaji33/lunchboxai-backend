@@ -871,6 +871,26 @@
             },
             "description": "Toggle save_for_later on a session. Set value to false to unmark.\n\nSee 'Set Session Flag (favorite)' for full documentation."
           }
+        },
+        {
+          "name": "Submit Session Feedback (rating & review)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feedback_rating\": 5,\n  \"feedback_comment\": \"Great lunchbox!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lunchbox/sessions/{{session_id}}/feedback",
+              "host": ["{{base_url}}"],
+              "path": ["api", "lunchbox", "sessions", "{{session_id}}", "feedback"]
+            },
+            "description": "Submit star rating and/or written feedback for a completed lunchbox session.\n\nBody fields (at least one required):\n- `feedback_rating` — optional integer from 1 to 5\n- `feedback_comment` — optional string (trimmed)\n\nOnly allowed when the session `status` is `completed`. Returns `{ data: { session } }` with the updated session.\n\nHTTP 400 if validation fails or session is not completed. HTTP 404 if session not found or not owned by caller."
+          }
         }
       ]
     },
