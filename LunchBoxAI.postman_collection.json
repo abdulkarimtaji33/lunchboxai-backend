@@ -2,7 +2,7 @@
   "info": {
     "name": "LunchBox AI",
     "_postman_id": "lunchboxai-collection-v1",
-    "description": "Complete API collection for LunchBox AI backend.\n\nBase URL: match your server (see `PORT` and `APP_BASE_URL` in backend `.env`; default collection value is http://localhost:3000).\n\nCollection variables:\n- `base_url` — server origin (default: http://localhost:3000)\n- `token`    — JWT; auto-populated by Register / Login test scripts\n- `child_id` — auto-populated by Add Child test script\n- `session_id` — auto-populated by Create Session test script\n- `food_item_id` — auto-populated by Create Food Item test script\n- `nutrition_goal_id` — auto-populated by Create Nutrition Goal test script\n- `allergen_id` — master-data allergen ID (1=Peanuts, 2=Tree Nuts, 3=Milk/Dairy, 4=Eggs, 5=Wheat/Gluten, 6=Soy, 7=Fish, 8=Shellfish, 9=Sesame, 10=Mustard, …15); set manually before using child-allergen endpoints\n\nRun order for a full E2E flow:\n1. Register (or Login)\n2. List Allergens → pick allergen IDs\n3. List School Rules → pick rule IDs\n4. List Avatars → pick avatar ID\n5. Add Child\n6. Create Session (generate lunchbox)\n7. Get Session History",
+    "description": "Complete API collection for LunchBox AI backend.\n\nBase URL: match your server (see `PORT` and `APP_BASE_URL` in backend `.env`; default collection value is http://localhost:3000).\n\nCollection variables:\n- `base_url` — server origin (default: http://localhost:3000)\n- `token`    — JWT; auto-populated by Register / Login test scripts\n- `child_id` — auto-populated by Add Child test script\n- `session_id` — auto-populated by Create Session test script\n- `food_item_id` — auto-populated by Create Food Item test script\n- `nutrition_goal_id` — auto-populated by Create Nutrition Goal test script\n- `allergen_id` — master-data allergen ID (1=Peanuts, 2=Tree Nuts, 3=Milk/Dairy, 4=Eggs, 5=Wheat/Gluten, 6=Soy, 7=Fish, 8=Shellfish, 9=Sesame, 10=Mustard, …15); set manually before using child-allergen endpoints\n\nSession multipart field `remove_background`: default true — strips generated image background locally. Set false to skip. Same for `/api/lunchbox/sessions/openrouter`.\n\nRun order for a full E2E flow:\n1. Register (or Login)\n2. List Allergens → pick allergen IDs\n3. List School Rules → pick rule IDs\n4. List Avatars → pick avatar ID\n5. Add Child\n6. Create Session (generate lunchbox)\n7. Get Session History",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -716,6 +716,12 @@
                   "description": "Optional — set to true to use the image edit API (gpt-image-1 edit), which fills the actual lunchbox photo instead of generating a new image from scratch. Default: false (uses image generate)."
                 },
                 {
+                  "key": "remove_background",
+                  "type": "text",
+                  "value": "true",
+                  "description": "Optional — local ONNX matting (@imgly/background-removal-node) on the generated image before save. Default on if omitted. Send false, 0, or the string 'false' to skip. Server can force off with DISABLE_LOCAL_BACKGROUND_REMOVAL=1 in .env."
+                },
+                {
                   "key": "planned_at",
                   "type": "text",
                   "value": "",
@@ -746,7 +752,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "lunchbox", "sessions"]
             },
-            "description": "Upload a lunchbox image (and optional ingredient photos) to trigger the full AI pipeline.\n\nPipeline steps:\n1. GPT-4o vision analyzes the lunchbox shape, compartments, and available ingredients\n2. GPT-image-1 generates a filled lunchbox image\n3. Result is persisted to `lunchbox_results` and session status set to `completed`\n\nRuntime: ~25–60 seconds (synchronous).\n\nResponse fields:\n- `session` — full session record\n- `filledLunchboxUrl` — HTTP URL of the saved generated PNG (under `/uploads/`)\n- `foodItems` — array of suggested food items\n- `lunchboxDescription` — AI description of the lunchbox\n- `compartmentCount` — detected number of compartments\n- `detectedShape` — e.g. 'rectangular', 'round'\n- `detectedOrientation` — e.g. 'landscape', 'portrait'\n- `generatedImageAnalysis` — analysis of the generated image\n- `generationAttempts` — array of attempt summaries\n- `processingMs` — total pipeline time in milliseconds\n\nHTTP 400 if lunchbox image is missing. HTTP 404 if child_id not found."
+            "description": "Upload a lunchbox image (and optional ingredient photos) to trigger the full AI pipeline.\n\nPipeline steps:\n1. GPT-4o vision analyzes the lunchbox shape, compartments, and available ingredients\n2. GPT-image-1 generates a filled lunchbox image\n3. Unless `remove_background` is false: local background removal runs on the generated PNG (transparent edges)\n4. Result is persisted to `lunchbox_results` and session status set to `completed`\n\nSame `remove_background` field applies to `POST /api/lunchbox/sessions/openrouter`.\n\nRuntime: ~25–60 seconds (synchronous); matting adds time on first run (model download).\n\nResponse fields:\n- `session` — full session record\n- `filledLunchboxUrl` — HTTP URL of the saved generated PNG (under `/uploads/`)\n- `foodItems` — array of suggested food items\n- `lunchboxDescription` — AI description of the lunchbox\n- `compartmentCount` — detected number of compartments\n- `detectedShape` — e.g. 'rectangular', 'round'\n- `detectedOrientation` — e.g. 'landscape', 'portrait'\n- `generatedImageAnalysis` — analysis of the generated image\n- `generationAttempts` — array of attempt summaries\n- `processingMs` — total pipeline time in milliseconds\n\nHTTP 400 if lunchbox image is missing. HTTP 404 if child_id not found."
           }
         },
         {
