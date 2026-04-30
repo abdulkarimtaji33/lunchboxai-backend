@@ -61,7 +61,7 @@ async function attachRelations(children) {
   );
 
   const [nutritionRows] = await pool.execute(
-    `SELECT cng.child_id, ng.goal_key, ng.label, ng.description
+    `SELECT cng.child_id, ng.id, ng.goal_key, ng.label, ng.description
      FROM child_nutrition_goals cng
      JOIN nutrition_goals ng ON ng.id = cng.nutrition_goal_id AND ng.is_active = 1
      WHERE cng.child_id IN (${placeholders})
@@ -83,7 +83,9 @@ async function attachRelations(children) {
   const nutritionMap = {};
   for (const r of nutritionRows) {
     if (!nutritionMap[r.child_id]) nutritionMap[r.child_id] = [];
-    nutritionMap[r.child_id].push({ goal_key: r.goal_key, label: r.label, description: r.description });
+    nutritionMap[r.child_id].push({
+      id: r.id, goal_key: r.goal_key, label: r.label, description: r.description,
+    });
   }
 
   return children.map(row =>
@@ -161,6 +163,33 @@ async function setSchoolRules(childId, schoolRuleIds) {
   }
 }
 
+async function setNutritionGoals(childId, nutritionGoalIds) {
+  await pool.execute('DELETE FROM child_nutrition_goals WHERE child_id = ?', [childId]);
+  if (nutritionGoalIds && nutritionGoalIds.length) {
+    const placeholders = nutritionGoalIds.map(() => '(?, ?)').join(', ');
+    const values = nutritionGoalIds.flatMap((gid) => [childId, gid]);
+    await pool.execute(
+      `INSERT IGNORE INTO child_nutrition_goals (child_id, nutrition_goal_id) VALUES ${placeholders}`,
+      values
+    );
+  }
+}
+
+async function findByIdAdmin(id) {
+  const [rows] = await pool.execute(
+    `SELECT c.*, u.email AS parent_email, u.name AS parent_name,
+            av.name AS avatar_name, av.filename AS avatar_filename
+     FROM children c
+     JOIN users u ON u.id = c.user_id
+     LEFT JOIN avatars av ON av.id = c.avatar_id
+     WHERE c.id = ?`,
+    [id]
+  );
+  if (!rows[0]) return null;
+  const [child] = await attachRelations(rows);
+  return child;
+}
+
 function normalizeChild(row, allergens, school_rules, nutrition_goals = []) {
   const { avatar_name, avatar_filename, ...rest } = row;
   const avatar = row.avatar_id
@@ -169,4 +198,7 @@ function normalizeChild(row, allergens, school_rules, nutrition_goals = []) {
   return { ...rest, allergens, school_rules, nutrition_goals, avatar };
 }
 
-module.exports = { create, findByUser, findByIdAndUser, update, deleteById, addAllergen, removeAllergen, getAllergens, setAllergens, setSchoolRules };
+module.exports = {
+  create, findByUser, findByIdAndUser, findByIdAdmin, update, deleteById,
+  addAllergen, removeAllergen, getAllergens, setAllergens, setSchoolRules, setNutritionGoals,
+};

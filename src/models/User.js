@@ -90,6 +90,30 @@ const User = {
     );
   },
 
+  /** Signed delta; credits never go below 0. */
+  async adjustGenerationCredits(id, delta) {
+    const d = parseInt(delta, 10);
+    if (!Number.isFinite(d) || d === 0) return;
+    await pool.query(
+      'UPDATE users SET generation_credits = GREATEST(0, generation_credits + ?) WHERE id = ?',
+      [d, id]
+    );
+  },
+
+  async setAdmin(id, isAdmin) {
+    await pool.query('UPDATE users SET is_admin = ? WHERE id = ?', [isAdmin ? 1 : 0, id]);
+  },
+
+  async countAdmins() {
+    const [rows] = await pool.query('SELECT COUNT(*) AS c FROM users WHERE is_admin = 1');
+    return rows[0].c;
+  },
+
+  async deleteById(id) {
+    const [result] = await pool.query('DELETE FROM users WHERE id = ?', [id]);
+    return result.affectedRows > 0;
+  },
+
   async consumeOneCredit(id) {
     const [result] = await pool.query(
       'UPDATE users SET generation_credits = generation_credits - 1 WHERE id = ? AND generation_credits > 0',

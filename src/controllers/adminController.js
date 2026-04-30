@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const pool = require('../config/database');
 const Child = require('../models/Child');
 const LunchBox = require('../models/LunchBox');
@@ -8,20 +9,128 @@ const { invalidateBillingCache } = require('../config/billing');
 const { formatResponse, formatError, paginate } = require('../utils/helpers');
 const { buildPublicFileUrl } = require('../services/imageService');
 
+function buildDateWhere(alias, from, to) {
+  const conditions = [];
+  const params = [];
+  const col = alias ? `${alias}.created_at` : 'created_at';
+  if (from && String(from).trim()) {
+    conditions.push(`${col} >= ?`);
+    params.push(`${String(from).trim()} 00:00:00`);
+  }
+  if (to && String(to).trim()) {
+    conditions.push(`${col} <= ?`);
+    params.push(`${String(to).trim()} 23:59:59`);
+  }
+  return { conditions, params };
+}
+
 async function stats(req, res, next) {
   try {
-    const [[u]] = await pool.execute('SELECT COUNT(*) AS c FROM users');
-    const [[s]] = await pool.execute('SELECT COUNT(*) AS c FROM lunchbox_sessions');
-    const [[done]] = await pool.execute(
-      `SELECT COUNT(*) AS c FROM lunchbox_sessions WHERE status = 'completed'`
+    const { from, to, recentStatus } = req.query;
+    const f = from && String(from).trim();
+    const t = to && String(to).trim();
+    const hasDateFilter = !!(f || t);
+
+    const sDate = buildDateWhere('s', from, to);
+    const uDate = buildDateWhere('u', from, to);
+    const cDate = buildDateWhere('c', from, to);
+    const stripeDate = buildDateWhere('', from, to);
+
+    const sessionWhereSql = sDate.conditions.length ? `WHERE ${sDate.conditions.join(' AND ')}` : '';
+    const sessionWhereAnd = sDate.conditions.length ? `AND ${sDate.conditions.join(' AND ')}` : '';
+
+    const [[u]] = await pool.execute(
+      hasDateFilter
+        ? `SELECT COUNT(*) AS c FROM users u ${uDate.conditions.length ? `WHERE ${uDate.conditions.join(' AND ')}` : ''}`
+        : 'SELECT COUNT(*) AS c FROM users',
+      uDate.params
     );
-    const [[ch]] = await pool.execute('SELECT COUNT(*) AS c FROM children');
+
+    const [[s]] = await pool.execute(
+      `SELECT COUNT(*) AS c FROM lunchbox_sessions s ${sessionWhereSql}`,
+      sDate.params
+    );
+
+    const [[done]] = await pool.execute(
+      `SELECT COUNT(*) AS c FROM lunchbox_sessions s WHERE s.status = 'completed' ${sessionWhereAnd}`,
+      sDate.params
+    );
+
+    const [[ch]] = await pool.execute(
+      hasDateFilter
+        ? `SELECT COUNT(*) AS c FROM children c ${cDate.conditions.length ? `WHERE ${cDate.conditions.join(' AND ')}` : ''}`
+        : 'SELECT COUNT(*) AS c FROM children',
+      cDate.params
+    );
+
+    const [[failed]] = await pool.execute(
+      `SELECT COUNT(*) AS c FROM lunchbox_sessions s WHERE s.status = 'failed' ${sessionWhereAnd}`,
+      sDate.params
+    );
+
+    const [[pending]] = await pool.execute(
+      `SELECT COUNT(*) AS c FROM lunchbox_sessions s WHERE s.status IN ('pending','processing') ${sessionWhereAnd}`,
+      sDate.params
+    );
+
+    let active7;
+    if (hasDateFilter) {
+      const [[a]] = await pool.execute(
+        `SELECT COUNT(DISTINCT s.user_id) AS c FROM lunchbox_sessions s ${sessionWhereSql}`,
+        sDate.params
+      );
+      active7 = a;
+    } else {
+      const [[a]] = await pool.execute(
+        `SELECT COUNT(DISTINCT user_id) AS c FROM lunchbox_sessions WHERE created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`
+      );
+      active7 = a;
+    }
+
+    const [[credits]] = await pool.execute(
+      'SELECT COALESCE(SUM(generation_credits), 0) AS total FROM users'
+    );
+
+    const stripeWhere = stripeDate.conditions.length
+      ? `WHERE ${stripeDate.conditions.join(' AND ')}`
+      : '';
+    const [[stripeCount]] = await pool.execute(
+      `SELECT COUNT(*) AS c FROM stripe_processed_events ${stripeWhere}`,
+      stripeDate.params
+    );
+
+    const recentConds = [...sDate.conditions];
+    const recentParams = [...sDate.params];
+    if (recentStatus && ['pending', 'processing', 'completed', 'failed'].includes(String(recentStatus))) {
+      recentConds.push('s.status = ?');
+      recentParams.push(String(recentStatus));
+    }
+    const recentWhere = recentConds.length ? `WHERE ${recentConds.join(' AND ')}` : '';
+    const recentLimit = hasDateFilter || recentStatus ? 25 : 5;
+
+    const [recentRows] = await pool.execute(
+      `SELECT s.id, s.status, s.created_at, u.name AS user_name, u.email AS user_email
+       FROM lunchbox_sessions s
+       JOIN users u ON u.id = s.user_id
+       ${recentWhere}
+       ORDER BY s.created_at DESC
+       LIMIT ?`,
+      [...recentParams, recentLimit]
+    );
+
     res.json(
       formatResponse({
         users: u.c,
         lunchboxSessions: s.c,
         completedGenerations: done.c,
         children: ch.c,
+        failedGenerations: failed.c,
+        pendingGenerations: pending.c,
+        activeUsersLast7Days: active7.c,
+        activeUsersLabel: hasDateFilter ? 'period' : '7d',
+        creditsInCirculation: Number(credits.total) || 0,
+        stripeEventsProcessed: stripeCount.c,
+        recentSessions: recentRows,
       })
     );
   } catch (err) {
@@ -31,14 +140,34 @@ async function stats(req, res, next) {
 
 async function listUsers(req, res, next) {
   try {
-    const { page, limit, q } = req.query;
+    const { page, limit, q, is_admin, provider, from, to } = req.query;
     const { page: p, limit: l, offset } = paginate(page, limit);
-    const term = q && String(q).trim() ? `%${String(q).trim()}%` : null;
+    const conditions = [];
+    const params = [];
 
-    const where = term
-      ? 'WHERE u.email LIKE ? OR u.name LIKE ?'
-      : '';
-    const params = term ? [term, term] : [];
+    if (q && String(q).trim()) {
+      const t = `%${String(q).trim()}%`;
+      conditions.push('(u.email LIKE ? OR u.name LIKE ?)');
+      params.push(t, t);
+    }
+    if (is_admin === '1' || is_admin === '0') {
+      conditions.push('u.is_admin = ?');
+      params.push(Number(is_admin));
+    }
+    if (provider && String(provider).trim()) {
+      conditions.push('u.provider = ?');
+      params.push(String(provider).trim());
+    }
+    if (from && String(from).trim()) {
+      conditions.push('u.created_at >= ?');
+      params.push(`${String(from).trim()} 00:00:00`);
+    }
+    if (to && String(to).trim()) {
+      conditions.push('u.created_at <= ?');
+      params.push(`${String(to).trim()} 23:59:59`);
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const [[{ total }]] = await pool.execute(
       `SELECT COUNT(*) AS total FROM users u ${where}`,
@@ -98,7 +227,7 @@ function parseJsonMaybe(v) {
 
 async function listGenerations(req, res, next) {
   try {
-    const { page, limit, q, userId, status } = req.query;
+    const { page, limit, q, userId, childId, status, from, to } = req.query;
     const { page: p, limit: l, offset } = paginate(page, limit);
     const conditions = [];
     const params = [];
@@ -107,9 +236,21 @@ async function listGenerations(req, res, next) {
       conditions.push('s.user_id = ?');
       params.push(parseInt(userId, 10));
     }
+    if (childId) {
+      conditions.push('s.child_id = ?');
+      params.push(parseInt(childId, 10));
+    }
     if (status && ['pending', 'processing', 'completed', 'failed'].includes(status)) {
       conditions.push('s.status = ?');
       params.push(status);
+    }
+    if (from && String(from).trim()) {
+      conditions.push('s.created_at >= ?');
+      params.push(`${String(from).trim()} 00:00:00`);
+    }
+    if (to && String(to).trim()) {
+      conditions.push('s.created_at <= ?');
+      params.push(`${String(to).trim()} 23:59:59`);
     }
     if (q && String(q).trim()) {
       const t = `%${String(q).trim()}%`;
@@ -359,6 +500,64 @@ async function deleteSubscriptionPackage(req, res, next) {
   }
 }
 
+async function uploadImage(req, res, next) {
+  try {
+    if (!req.file) {
+      return res.status(400).json(formatError('Image file required', 'VALIDATION_ERROR'));
+    }
+    const { UPLOAD_DIR } = require('../config/constants');
+    const stored = path.join(UPLOAD_DIR, req.file.filename).replace(/\\/g, '/');
+    res.json(
+      formatResponse({
+        path: stored,
+        url: buildPublicFileUrl(stored),
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listStripeEvents(req, res, next) {
+  try {
+    const { page, limit, from, to } = req.query;
+    const { page: p, limit: l, offset } = paginate(page, limit);
+    const conditions = [];
+    const filterParams = [];
+    if (from && String(from).trim()) {
+      conditions.push('created_at >= ?');
+      filterParams.push(`${String(from).trim()} 00:00:00`);
+    }
+    if (to && String(to).trim()) {
+      conditions.push('created_at <= ?');
+      filterParams.push(`${String(to).trim()} 23:59:59`);
+    }
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const [[{ total }]] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM stripe_processed_events ${whereClause}`,
+      filterParams
+    );
+    const [rows] = await pool.execute(
+      `SELECT id, stripe_event_id, created_at FROM stripe_processed_events
+       ${whereClause}
+       ORDER BY id DESC LIMIT ? OFFSET ?`,
+      [...filterParams, l, offset]
+    );
+    res.json(
+      formatResponse({
+        events: rows,
+        total,
+        page: p,
+        limit: l,
+        totalPages: Math.ceil(total / l) || 1,
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   stats,
   listUsers,
@@ -369,4 +568,6 @@ module.exports = {
   createSubscriptionPackage,
   updateSubscriptionPackage,
   deleteSubscriptionPackage,
+  listStripeEvents,
+  uploadImage,
 };

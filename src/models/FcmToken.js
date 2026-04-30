@@ -45,4 +45,18 @@ async function getAllTokens() {
   return rows.map(r => r.token);
 }
 
-module.exports = { upsert, setEnabled, removeByToken, getAllTokens };
+async function listByUserId(userId) {
+  const [rows] = await pool.execute(
+    `SELECT id, user_id, token, notifications_enabled, created_at, updated_at
+     FROM user_fcm_tokens WHERE user_id = ? ORDER BY updated_at DESC`,
+    [userId]
+  );
+  return rows;
+}
+
+async function deleteById(id) {
+  const [result] = await pool.execute('DELETE FROM user_fcm_tokens WHERE id = ?', [id]);
+  return result.affectedRows > 0;
+}
+
+module.exports = { upsert, setEnabled, removeByToken, getAllTokens, listByUserId, deleteById };

@@ -222,6 +222,26 @@ async function deleteById(sessionId) {
   await pool.execute('DELETE FROM lunchbox_sessions WHERE id = ?', [sessionId]);
 }
 
+async function adminPatch(sessionId, fields) {
+  const allowed = ['status', 'notes', 'planned_at', 'is_favorite', 'save_for_later'];
+  const sets = [];
+  const values = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (!allowed.includes(k) || v === undefined) continue;
+    if (k === 'status' && !['pending', 'processing', 'completed', 'failed'].includes(v)) continue;
+    sets.push(`${k} = ?`);
+    if (k === 'is_favorite' || k === 'save_for_later') values.push(v ? 1 : 0);
+    else values.push(v);
+  }
+  if (!sets.length) return false;
+  values.push(sessionId);
+  const [result] = await pool.execute(
+    `UPDATE lunchbox_sessions SET ${sets.join(', ')} WHERE id = ?`,
+    values
+  );
+  return result.affectedRows > 0;
+}
+
 function normalizeSession(row) {
   if (row.suggested_items && typeof row.suggested_items === 'string') {
     try { row.suggested_items = JSON.parse(row.suggested_items); } catch { row.suggested_items = null; }
@@ -271,6 +291,6 @@ async function setSessionFeedback(sessionId, userId, { rating, comment }) {
 module.exports = {
   createSession, insertIngredientImages, insertSessionAllergenOverrides,
   updateStatus, attachResult, findByUser, findByIdAndUser, findByIdAsAdmin,
-  getFilePaths, resolveAllergens, deleteById, setPlanDate, setSessionFlag,
+  getFilePaths, resolveAllergens, deleteById, adminPatch, setPlanDate, setSessionFlag,
   setSessionFeedback,
 };
