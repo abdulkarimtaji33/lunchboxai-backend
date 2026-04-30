@@ -41,22 +41,16 @@ function detectAspectRatio(width, height) {
 const VERIFICATION_PROMPT =
   'Analyze this lunchbox image and return ONLY valid JSON in this exact schema: ' +
   '{"compartment_count":number,"shape":"rectangular|square|round|other","orientation":"landscape|portrait|square",' +
-  '"food_items":[{"name":"food name","quantity":"realistic amount with correct UOM"}],' +
-  '"cooking_ingredients":[{"name":"item name","quantity":"realistic purchase quantity"}]}. ' +
-  'food_items: every food you see placed in the lunchbox. ' +
-  'For quantity use the most natural and informative unit for each food — follow these rules strictly: ' +
-  'fruits and vegetables → grams (e.g. "80g", "60g"); ' +
-  'nuts, seeds, dried fruit → grams (e.g. "20g"); ' +
-  'cheese → grams (e.g. "30g"); ' +
-  'dips, sauces, yogurt → grams or ml (e.g. "50g", "60ml"); ' +
-  'crackers, pretzels, chips → grams (e.g. "25g"); ' +
-  'sandwiches, wraps, rolls → use count only if visually countable (e.g. "2 wraps", "1 sandwich"); ' +
-  'eggs → count (e.g. "1 boiled egg"); ' +
-  'pasta, rice, grains → grams (e.g. "70g"); ' +
-  'NEVER say "X pieces" for fruits, vegetables, berries, grapes, nuts, crackers, or cheese — always use grams for those. ' +
-  'cooking_ingredients: the specific grocery/supermarket items a parent needs to buy to make those foods. ' +
-  'Each entry must be a real purchasable product with a realistic quantity needed for one lunchbox (e.g. {"name":"baby carrots","quantity":"80g"}, {"name":"whole wheat tortillas","quantity":"2 tortillas"}). ' +
-  'Never use vague phrases like "dip ingredients". Use grams for produce/cheese/meat, ml for liquids, count for discrete items like tortillas or eggs.';
+  '"food_items":[{"name":"food name","quantity":"amount with UOM"}],' +
+  '"cooking_ingredients":[{"name":"raw ingredient name","quantity":"amount with UOM"}]}. ' +
+  'food_items: every finished food you see placed in the lunchbox. ' +
+  'For food_items quantity: use grams for fruits, vegetables, berries, nuts, cheese, crackers, pasta, rice; ' +
+  'use ml for liquids/yogurt/dips; use count only for whole discrete items like a sandwich, wrap, boiled egg. ' +
+  'NEVER use "pieces" for berries, grapes, or any fruit/vegetable. ' +
+  'cooking_ingredients: the raw grocery items a parent must buy to prepare the food_items — these are INGREDIENTS, not the finished foods themselves. ' +
+  'List only raw/packaged supermarket products (e.g. sliced turkey, cheddar block, strawberries punnet, baby carrot bag). ' +
+  'Never list a finished food dish as a cooking ingredient. ' +
+  'For cooking_ingredients quantity: use grams for produce/meat/cheese, ml for liquids, count for packaged discrete items.';
 
 /** Normalise food_items / cooking_ingredients — supports plain strings and {name,quantity} objects. */
 function normaliseItems(raw) {
