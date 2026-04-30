@@ -41,9 +41,19 @@ function detectAspectRatio(width, height) {
 const VERIFICATION_PROMPT =
   'Analyze this lunchbox image and return ONLY valid JSON in this exact schema: ' +
   '{"compartment_count":number,"shape":"rectangular|square|round|other","orientation":"landscape|portrait|square",' +
-  '"food_items":[{"name":"food name","quantity":"e.g. 30g or 3 pieces or 1 slice"}],' +
+  '"food_items":[{"name":"food name","quantity":"realistic amount with correct UOM"}],' +
   '"cooking_ingredients":["item1","item2"]}. ' +
-  'food_items: every food you see placed in the lunchbox. For each item include a realistic quantity with the most appropriate unit of measure for that food (g, ml, pieces, slices, tbsp, cup, etc.). ' +
+  'food_items: every food you see placed in the lunchbox. ' +
+  'For quantity use the most natural and informative unit for each food — follow these rules strictly: ' +
+  'fruits and vegetables → grams (e.g. "80g", "60g"); ' +
+  'nuts, seeds, dried fruit → grams (e.g. "20g"); ' +
+  'cheese → grams (e.g. "30g"); ' +
+  'dips, sauces, yogurt → grams or ml (e.g. "50g", "60ml"); ' +
+  'crackers, pretzels, chips → grams (e.g. "25g"); ' +
+  'sandwiches, wraps, rolls → use count only if visually countable (e.g. "2 wraps", "1 sandwich"); ' +
+  'eggs → count (e.g. "1 boiled egg"); ' +
+  'pasta, rice, grains → grams (e.g. "70g"); ' +
+  'NEVER say "X pieces" for fruits, vegetables, berries, grapes, nuts, crackers, or cheese — always use grams for those. ' +
   'cooking_ingredients: the specific grocery/supermarket items a parent needs to buy to make those foods (e.g. "baby carrots", "cheddar cheese", "whole wheat bread"). Each entry must be a real purchasable product — never a vague phrase like "dip ingredients".';
 
 /** Normalise food_items from AI — supports both plain strings and {name,quantity} objects. */
