@@ -40,9 +40,22 @@ function detectAspectRatio(width, height) {
 
 const VERIFICATION_PROMPT =
   'Analyze this lunchbox image and return ONLY valid JSON in this exact schema: ' +
-  '{"compartment_count":number,"shape":"rectangular|square|round|other","orientation":"landscape|portrait|square","food_items":["food1","food2"],"cooking_ingredients":["item1","item2"]}. ' +
-  'food_items: every food you see placed in the lunchbox. ' +
+  '{"compartment_count":number,"shape":"rectangular|square|round|other","orientation":"landscape|portrait|square",' +
+  '"food_items":[{"name":"food name","quantity":"e.g. 30g or 3 pieces or 1 slice"}],' +
+  '"cooking_ingredients":["item1","item2"]}. ' +
+  'food_items: every food you see placed in the lunchbox. For each item include a realistic quantity with the most appropriate unit of measure for that food (g, ml, pieces, slices, tbsp, cup, etc.). ' +
   'cooking_ingredients: the specific grocery/supermarket items a parent needs to buy to make those foods (e.g. "baby carrots", "cheddar cheese", "whole wheat bread"). Each entry must be a real purchasable product — never a vague phrase like "dip ingredients".';
+
+/** Normalise food_items from AI — supports both plain strings and {name,quantity} objects. */
+function normaliseFoodItems(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(item => {
+    if (item && typeof item === 'object') {
+      return { name: String(item.name || '').trim(), quantity: String(item.quantity || '').trim() };
+    }
+    return { name: String(item || '').trim(), quantity: '' };
+  }).filter(i => i.name);
+}
 
 function sessionPreferencesBlock(sessionContext) {
   const t = sessionContext && String(sessionContext).trim();
@@ -143,7 +156,7 @@ Style: Clean white background, bright natural lighting, sharp focus, appetizing 
     console.log('Attempt summary:', summary);
 
     if (!bestResult || score < bestResult.score) {
-      bestResult = { url: candidateUrl, b64: imageResponse.data[0].b64_json || null, score, generatedAnalysis, foodItems: generatedAnalysis.food_items || [], cookingIngredients: generatedAnalysis.cooking_ingredients || [] };
+      bestResult = { url: candidateUrl, b64: imageResponse.data[0].b64_json || null, score, generatedAnalysis, foodItems: normaliseFoodItems(generatedAnalysis.food_items), cookingIngredients: generatedAnalysis.cooking_ingredients || [] };
     }
 
     if (
@@ -265,10 +278,10 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
     console.log('Edit verification failed:', err.message);
   }
 
-  const foodItems          = generatedAnalysis.food_items          || [];
+  const foodItems          = normaliseFoodItems(generatedAnalysis.food_items);
   const cookingIngredients = generatedAnalysis.cooking_ingredients || [];
   console.log('Edit generation complete. Food items:', foodItems);
-  console.log('Edit generation complete. Food items:', cookingIngredients);
+  console.log('Edit cooking ingredients:', cookingIngredients);
 
   return {
     filledImageDataUrl,
@@ -381,7 +394,7 @@ Style: Bright natural lighting, sharp focus, professional food photography.`;
     }
   }
 
-  const foodItems          = generatedAnalysis.food_items          || [];
+  const foodItems          = normaliseFoodItems(generatedAnalysis.food_items);
   const cookingIngredients = generatedAnalysis.cooking_ingredients || [];
   console.log('OpenRouter generation complete. Food items:', foodItems);
 
